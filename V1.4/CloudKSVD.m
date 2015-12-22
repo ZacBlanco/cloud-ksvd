@@ -54,7 +54,7 @@ for Iteration = 1:Td
         end
     end
 end
-close(h)
+%close(h)
 end
 
 %% Power/Consensus Sim
