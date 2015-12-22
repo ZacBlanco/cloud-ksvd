@@ -45,7 +45,7 @@ if scaling ~= 1
 else
     newIm2 = newIm;
 end
-index = [0:samples:(x*y)] + 1;
+index = [0:samples:(length(numbers)*samples)] + 1;
 
 %close(h);
 end
