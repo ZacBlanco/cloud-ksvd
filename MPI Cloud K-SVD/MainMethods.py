@@ -4,7 +4,6 @@ import time
 from numpy import linalg as LA
 from ConsensusMethods import *
 from mpi4py import MPI
-from MNIST_Loader import *
 
 #Main Functions
 
