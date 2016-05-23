@@ -1,0 +1,300 @@
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 25 
+
+tD: 1 
+t0: 1 
+tc: 1 
+tp: 1 
+
+Total ckSVD running time:  3.399277 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 3 
+tc: 3 
+tp: 3 
+
+Total ckSVD running time: 77.725167 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 3 
+tc: 3 
+tp: 5 
+
+Total ckSVD running time: 129.511720 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 3 
+tc: 5 
+tp: 3 
+
+Total ckSVD running time: 128.697630 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 3 
+tc: 5 
+tp: 5 
+
+Total ckSVD running time: 213.802207 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 5 
+tc: 3 
+tp: 3 
+
+Total ckSVD running time: 78.282933 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 5 
+tc: 3 
+tp: 5 
+
+Total ckSVD running time: 128.942356 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 5 
+tc: 5 
+tp: 3 
+
+Total ckSVD running time: 128.172487 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 3 
+t0: 5 
+tc: 5 
+tp: 5 
+
+Total ckSVD running time: 214.799948 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 3 
+tc: 3 
+tp: 3 
+
+Total ckSVD running time: 129.590201 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 3 
+tc: 3 
+tp: 5 
+
+Total ckSVD running time: 214.046852 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 3 
+tc: 5 
+tp: 3 
+
+Total ckSVD running time: 213.919992 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 3 
+tc: 5 
+tp: 5 
+
+Total ckSVD running time: 354.727292 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 5 
+tc: 3 
+tp: 3 
+
+Total ckSVD running time: 130.268328 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 5 
+tc: 3 
+tp: 5 
+
+Total ckSVD running time: 215.433835 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 5 
+tc: 5 
+tp: 3 
+
+Total ckSVD running time: 216.002077 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 5 
+t0: 5 
+tc: 5 
+tp: 5 
+
+Total ckSVD running time: 360.383690 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 3 
+tc: 3 
+tp: 3 
+
+Total ckSVD running time: 260.269360 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 3 
+tc: 3 
+tp: 5 
+
+Total ckSVD running time: 430.222693 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 3 
+tc: 5 
+tp: 3 
+
+Total ckSVD running time: 427.162921 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 3 
+tc: 5 
+tp: 5 
+
+Total ckSVD running time: 710.197649 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 5 
+tc: 3 
+tp: 3 
+
+Total ckSVD running time: 261.336051 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 5 
+tc: 3 
+tp: 5 
+
+Total ckSVD running time: 431.148844 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 5 
+tc: 5 
+tp: 3 
+
+Total ckSVD running time: 429.471830 
+
+Resolution (16, 16)
+Classes: [0, 3, 5, 8, 9]
+Amount per class: 5 
+Signals: 10 
+
+tD: 10 
+t0: 5 
+tc: 5 
+tp: 5 
+
+Total ckSVD running time: 710.508905 
