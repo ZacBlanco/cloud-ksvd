@@ -2,7 +2,7 @@
 
 ## [MNIST](http://yann.lecun.com/exdb/mnist/) Simulation
 
-The code in the MNIST Simulation folder can be run for a Monte Carlo Simulation of local K-SVD and CLoud K-SVD using MNIST Data. The parameters for it can be set in the file `MNIST_Analysis.m`, which may then be run for the simulation itself. The code outputs the average representation error and classification accuracy for both forms of K-SVD using the same data. The node networks for Cloud K-SVD are generated randomly each time the code is run, and there is no simulated packet loss. Therefore, the results represent a theoretical best case for the results of Cloud K-SVD. Our simulated results, which were the averages of 100 Monte Carlo trials, are given in the Report pdf. 
+The code in the MNIST Simulation folder can be run for a Monte Carlo Simulation of local [K-SVD](http://www.cs.technion.ac.il/~freddy/papers/120.pdf) and [Cloud K-SVD](http://arxiv.org/abs/1412.7839) using MNIST Data. The parameters for it can be set in the file `MNIST_Analysis.m`, which may then be run for the simulation itself. The code outputs the average representation error and classification accuracy for both forms of K-SVD using the same data. The node networks for Cloud K-SVD are generated randomly each time the code is run, and there is no simulated packet loss. Therefore, the results represent a theoretical best case for the results of Cloud K-SVD. Our simulated results, which were the averages of 100 Monte Carlo trials, are given in the Report pdf. 
 
 ## [Corrective Consensus](http://vision.jhu.edu/assets/consensus-cdc10.pdf) Simulation
 
@@ -10,7 +10,7 @@ The Corrective Consensus folder contains a MATLAB simulation of a network perfom
 
 # RPI Implementation
 
-## MPI [Cloud K-SVD](http://arxiv.org/abs/1412.7839) Demo
+## MPI Cloud K-SVD Demo
 
 The code to run Cloud K-SVD, Corrective Consensus, and Active Dictionary Learning is provided in this folder. This implementation uses [**OpenMPI**](https://www.open-mpi.org/), which requires multiple dependencies that can be installed with the following commands:
 
