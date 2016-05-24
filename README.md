@@ -1,15 +1,22 @@
-# RPI-Implementation
+# MATLAB Implementation
 
-## MPI [Cloud K-SVD](http://arxiv.org/abs/1412.7839)
+## MNIST Simulation
 
-The code to run Cloud K-SVD, Corrective Consensus, and Active Dictionary Learning is provided in this folder.  This implementation uses [**OpenMPI**](https://www.open-mpi.org/), which requires multiple dependencies that can be installed with the following commands:
+The code in the MNIST Simulation folder can be run for a Monte Carlo Simulation of local K-SVD and CLoud K-SVD using MNIST Data. The parameters for it can be set in the file `MNIST_Analysis.m`, which may then be run for the simulation itself. The code outputs the average representation error and classification accuracy for both forms of K-SVD using the same data. The node networks for Cloud K-SVD are generated randomly each time the code is run, and there is no simulated packet loss. Therefore, the results represent a theoretical best case for the results of Cloud K-SVD. Our simulated results, which were the averages of 100 Monte Carlo trials, are given in the Report pdf. 
+
+## Corrective Consensus Simulation
+
+The Corrective Consensus folder contains a MATLAB simulation of a network perfoming corrective consensus with a variable amount of packet loss. This code may be run with the following command: `ConsensusRobustv2(n,dim,packetloss,iterations,k)` where *n* is the number of nodes, *dim* is the dimension of the data, *packetloss* is the mean packets dropped per iteration, *iterations* is the number of consensus iterations, and k is the number of standard iterations before a corrective iteration. The packet loss is simulated using a poisson random variable, and the network is randomly generated each time the code is run. The output of the code shows each node's data converging to the true average (denoted by the blue-dashed line) over time. A more detailed explanation is given in the discussion of our report.
+
+# RPI Implementation
+
+## MPI [Cloud K-SVD](http://arxiv.org/abs/1412.7839) Demo
+
+The code to run Cloud K-SVD, Corrective Consensus, and Active Dictionary Learning is provided in this folder. This implementation uses [**OpenMPI**](https://www.open-mpi.org/), which requires multiple dependencies that can be installed with the following commands:
 
 - OpenMPI: `sudo apt-get install openmpi-bin openmpi-common openssh-client openssh-server  libopenmpi-dev`
-
 - Python-Dev: `sudo apt-get install python-dev`
-
 - MPI4Py: `sudo pip install mpi4py`
-
 - Python-MNIST `sudo pip install python-mnist`
 
 The documentation for MPI4Py is available [here](http://pythonhosted.org/mpi4py/usrman/index.html). 
@@ -21,7 +28,7 @@ This code requires each node to be on an ad-hoc network and able to keyless ssh 
 **Usage:** `mpiexec -n <N> --hostifle <./hostfile> python CloudkSVD.py <tD> <t0> <tc> <tp>`
 
 - Used for performance testing Cloud K-SVD. 
-- Set custom node indexes and edges to run on your own network. 
+- Set custom node indexes and edges [to create a graph](https://mpi4py.scipy.org/docs/apiref/mpi4py.MPI.Graphcomm-class.html) that resembles your network before running
 - Calls on MNIST_Loader.py and MainMethods.py
 
 ### MainMethods.py
@@ -49,8 +56,6 @@ This code requires each node to be on an ad-hoc network and able to keyless ssh 
 
 - Change the option variable in the code to debug data transmission, consensus, or the power method
 - By default, set to a fully connected 5 node network with little data
-
-### Performance Testing
 
 ##Performance Data & Analysis
 
