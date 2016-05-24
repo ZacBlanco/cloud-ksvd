@@ -1,10 +1,10 @@
 # MATLAB Implementation
 
-## MNIST Simulation
+## [MNIST](http://yann.lecun.com/exdb/mnist/) Simulation
 
 The code in the MNIST Simulation folder can be run for a Monte Carlo Simulation of local K-SVD and CLoud K-SVD using MNIST Data. The parameters for it can be set in the file `MNIST_Analysis.m`, which may then be run for the simulation itself. The code outputs the average representation error and classification accuracy for both forms of K-SVD using the same data. The node networks for Cloud K-SVD are generated randomly each time the code is run, and there is no simulated packet loss. Therefore, the results represent a theoretical best case for the results of Cloud K-SVD. Our simulated results, which were the averages of 100 Monte Carlo trials, are given in the Report pdf. 
 
-## Corrective Consensus Simulation
+## [Corrective Consensus](http://vision.jhu.edu/assets/consensus-cdc10.pdf) Simulation
 
 The Corrective Consensus folder contains a MATLAB simulation of a network perfoming corrective consensus with a variable amount of packet loss. This code may be run with the following command: `ConsensusRobustv2(n,dim,packetloss,iterations,k)` where *n* is the number of nodes, *dim* is the dimension of the data, *packetloss* is the mean packets dropped per iteration, *iterations* is the number of consensus iterations, and k is the number of standard iterations before a corrective iteration. The packet loss is simulated using a poisson random variable, and the network is randomly generated each time the code is run. The output of the code shows each node's data converging to the true average (denoted by the blue-dashed line) over time. A more detailed explanation is given in the discussion of our report.
 
@@ -38,7 +38,7 @@ This code requires each node to be on an ad-hoc network and able to keyless ssh 
 
 ### ConsensusMethods.py
 
-- Contains data transmission methods, [Corrective Consensus](http://vision.jhu.edu/assets/consensus-cdc10.pdf), and the [Distributed Power Method](http://arxiv.org/pdf/1105.1185v1.pdf)
+- Contains data transmission methods, Corrective Consensus, and the [Distributed Power Method](http://arxiv.org/pdf/1105.1185v1.pdf)
 - Data transmission and reception is done at each node by polling for data within a given time out period
 - Consensus requries weights, which requires the degree matrix generated through DiscoverDegrees in MainMethods.py
 
