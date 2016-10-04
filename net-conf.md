@@ -36,11 +36,11 @@ Each node is configured on the 2.4GHz Wireless network with a static IP and host
 
 | Pi Hardware Label | Static Network IP | hostname      |
 |-------------------|-------------------|---------------|
-| A                 | 192.168.1.180     | raspberrypi\* |
-| B                 | 192.168.1.181     | raspberrypi\* |
-| C                 | 192.168.1.182     | raspberrypi\* |
-| D                 | 192.168.1.183     | raspberrypi\* |
-| E                 | 192.168.1.184     | raspberrypi\* |
+| A                 | 192.168.1.180     | jared.siv     |
+| B                 | 192.168.1.181     | bighead.siv   |
+| C                 | 192.168.1.182     | gilfoyle.siv  |
+| D                 | 192.168.1.183     | dinesh.siv    |
+| E                 | 192.168.1.184     | erlich.siv    |
 
 \* = still the default raspbian hostname. Has not been setup yet.
 
@@ -96,11 +96,11 @@ Distribute this file to your own computer and all of the nodes in the network fo
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 
-192.168.1.180 nodeA
-192.168.1.181 nodeB
-192.168.1.182 nodeC
-192.168.1.183 nodeD
-192.168.1.184 nodeE
+192.168.1.180 jared.siv
+192.168.1.181 bighead.siv
+192.168.1.182 gilfoyle.siv
+192.168.1.183 dinesh.siv
+192.168.1.184 erlich.siv
 ```
 
 
