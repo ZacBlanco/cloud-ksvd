@@ -1,3 +1,20 @@
+# Quick-Start Guide
+
+### Install Dependencies
+
+```
+sudo apt-get install -y python-numpy python-scipy  python-nose
+
+sudo pip install -r requirements.txt
+```
+
+Run the manager server with 
+
+```
+python3 run_manager.py
+```
+
+
 # MATLAB Implementation
 
 ## [MNIST](http://yann.lecun.com/exdb/mnist/) Simulation
