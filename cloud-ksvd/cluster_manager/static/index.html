@@ -1,12 +1,93 @@
 <!doctype html>
 
 <html>
-	<head>
-		<title>Cloud K-SVD Cluster Manager</title>
-	</head>
-	<body>
-		Cluster Name: Silicon Valley
-		<hr>
-		Hello, World!
-	</body>
+
+<head>
+	<title>Cloud K-SVD Cluster Manager</title>
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u"
+					crossorigin="anonymous">
+</head>
+
+<body>
+	<header class="container">
+		<h1>Cloud K-SVD Cluster Manager</h1>
+	</header>
+	<hr>
+	<div class="container">
+		<div class="row">
+			<h3>Silicon Valley Cluster</h3>
+		</div>
+
+		<br>
+		<div class="col-md-3">
+			You are currently connected to the head node, <code>richard.siv</code>
+
+		</div>
+		<div class="container row">
+			<h4>Cluster Reference</h4>
+			<div class="col-md-6">
+				<table id="cluster_data" class="table table-bordered table-hover ">
+					<tr>
+						<td>Node Name</td>
+						<td>Hostname</td>
+						<td>Static IP</td>
+						<td>Hardware Label</td>
+						<td>Connected?</td>
+					</tr>
+					<tbody>
+						<tr>
+							<td><code>richard</code></td>
+							<td><code>richard.siv</code></td>
+							<td>192.168.1.177</td>
+							<td>N/A</td>
+							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
+						</tr>
+						<tr>
+							<td><code>jared</code></td>
+							<td><code>jared.siv</code></td>
+							<td>192.168.1.180</td>
+							<td>A</td>
+							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
+						</tr>
+						<tr>
+							<td><code>bighead</code></td>
+							<td><code>bighead.siv</code></td>
+							<td>192.168.1.181</td>
+							<td>B</td>
+							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
+
+						</tr>
+						<tr>
+							<td><code>gilfoyle</code></td>
+							<td><code>gilfoyle.siv</code></td>
+							<td>192.168.1.182</td>
+							<td>C</td>
+							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
+
+						</tr>
+						<tr>
+							<td><code>dinesh</code></td>
+							<td><code>dinesh.siv</code></td>
+							<td>192.168.1.183</td>
+							<td>D</td>
+							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
+
+						</tr>
+						<tr>
+							<td><code>erlich</code></td>
+							<td><code>erlich.siv</code></td>
+							<td>192.168.1.184</td>
+							<td>E</td>
+							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
+						</tr>
+						
+					</tbody>
+				</table>
+			</div>
+		</div>
+	</div>
+
+</body>
+
 </html>
