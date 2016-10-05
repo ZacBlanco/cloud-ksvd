@@ -41,7 +41,7 @@
 							<td><code>richard.siv</code></td>
 							<td>192.168.1.177</td>
 							<td>N/A</td>
-							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
+							<td><span style="color:limegreen; text-align:center; display:block" class="glyphicon glyphicon-asterisk connection"></span></td>
 						</tr>
 						<tr>
 							<td><code>jared</code></td>
@@ -81,9 +81,46 @@
 							<td>E</td>
 							<td><span style="color:orangered; text-align:center; display:block" class="glyphicon glyphicon-asterisk"></span></td>
 						</tr>
-						
+
 					</tbody>
 				</table>
+			</div>
+
+			<div>
+				Please load the data manually <br>
+				<br>
+
+				<form method="POST" action="/run">
+					<div class="input-group">
+						<label class="input-group-addon">Sparsity</label>
+						<input class="form-control" placeholder="A number strictly less than thew data dimension" type="number" min="0">
+					</div>
+					<br>
+					<div class="input-group">
+						<label class="input-group-addon">Dictionary Atoms</label>
+						<input class="form-control" placeholder="A number greater than data dimension" type="number" min="0">
+					</div>
+					<br>
+					<div class="input-group">
+						<label class="input-group-addon">Graph Configuration</label>
+						<textarea style="height:250px" class="form-control" type="textarea" min="0">
+{
+	"graph": {
+		"richard": ["jared", "bighead", "erlich"],
+		"bighead": ["gilfoyle", "richard"],
+		"gilfoyle":["bighead", "erlich", "dinesh"],
+		"dinesh": ["gilfoyle", "erlich"],
+		"erlich": ["dinesh", "gilfoyle", "jared"]
+	}
+}
+						</textarea>
+					</div>
+					<br>
+					
+					<div class="input-group">
+						<button class="btn btn-success"> Run Cloud K-SVD</button>
+					</div>
+				</form>
 			</div>
 		</div>
 	</div>
