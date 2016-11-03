@@ -21,6 +21,17 @@ def time_sync(tic,wait_period): #Simpler to use MPI barrier command, but that's 
         current = time.time()  
 
 def discoverDegrees(c,comm,node_names):
+    '''Return a vector the size of the number of nodes in the graph.
+    
+    Args:
+        c (MPI_Graph): An MPI graph object created from MPI.create_graph
+        comm (MPI_Comm): The MPI Comm_World from the calling node.
+        names (list): A list of string for the names of each node.
+
+    Returns:
+        list: A list of the degrees of each node. 
+
+    '''
     #Figures out the degree matrix of the network by contacting neighbors
     #Necesary to know degrees of neighbors for Metropolis-Hastings Weights
     rank = MPI.COMM_WORLD.Get_rank()
