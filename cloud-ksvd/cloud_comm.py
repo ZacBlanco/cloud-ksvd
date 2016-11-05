@@ -26,6 +26,20 @@ def check_port(port):
     else:
         return True
 
+def get_payload_size(payload):
+    '''Take UDP payload and  calculate the size in bytes. Should be structured as a dict. Note this method is slightly expensive because it encodes a dictionary as a JSON string in order to calculate the length
+
+    We also set the separators to exclude spaces in the interest of saving data due to spaces being unnecessary
+
+    Args:
+        payload(obj): A JSON serializable object representing the payload data
+
+    Returns:
+        int: The size of the data in bytes of the payload
+    '''
+    data = json.dumps(payload, separators=[':', ',']).encode('utf-8')
+    return len(data)
+
 
 class Communicator():
     '''This is a threaded class interface designed to send and receive messages 'asynchronously' via pythons threading interface. It was designed mainly designed for use in communication for the algorithm termed 'Cloud K-SVD'.
@@ -39,7 +53,15 @@ class Communicator():
     - receive: process and store information about received packets
     '''
 
-    def __init__(self, protocol, listen_port, send_port=None):
+    def __init__(self, protocol, listen_port, send_port=None, use_compression=True):
+        '''Constructor
+
+        Args:
+            protocol (str): A string. One of 'UDP' or 'TCP' (case insensistive)
+            listen_port(int): A port between 0 and 65535
+            send_port(int): (Optional) Defaults to value set for listen_port, otherwise must be set to a valid port number.
+            use_compression (bool): A boolean representing the whether or not to use compression on packet transmission and decompression on received packets. 
+        '''
         protocol = protocol.upper()
         if protocol not in ['TCP', 'UDP']:
             raise ValueError('Protocol must be one of "TCP" or "UDP"')
@@ -61,6 +83,7 @@ class Communicator():
                 self.send_port = self.listen_port
                 self.send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        self.use_compression = True
 
         # Set the defaults for the thread and listening object
         self.is_open = True
@@ -69,14 +92,31 @@ class Communicator():
         self.mtu = get_mtu()
 
     def close(self):
+        '''Closes both listening sockets and the sending sockets
+
+        The sockets may only be closed once. After closing a new object must be created.
+
+        Args:
+            N/A
+        
+        Returns:
+            N/A
+        
+        Raises:
+            BrokenPipeError: If close was already called previously.
+
+        '''
         if self.is_open == True:
+            self.stop_listen()
             self.listen_sock.close()
             self.send_sock.close()
             self.is_open = False
+        else:
+            raise BrokenPipeError('Cannot close. Sockets were previously closed.')
     
 
 
-    def listen(self):
+    def start_listen(self):
         '''Start listening on port ``self.listen_port``. Creates a new thread where the socket will be created
 
         Args:
@@ -86,6 +126,9 @@ class Communicator():
             N/A
 
         '''
+        if self.is_open != True:
+            raise BrokenPipeError('Cannot listen. Sockets were previously closed.')
+
         if self.listen_thread == None: # Create thread if not already created
             self.listen_thread = threading.Thread(target=__run_thread__, args=(self, self.listen_sock, '', self.listen_port))
             self.is_listening = True
@@ -93,7 +136,7 @@ class Communicator():
         
 
     def __run_listen__(self, _sock, host, port):
-        '''Incurs the actual creation of the thread in order to listen for incoming messages. This is the worker method for the threaded listening interface.
+        '''Worker method for the threaded listener in order to retrieve incoming messages
 
         Args:
             _sock (sockets.socket): A socket object to bind to
@@ -113,6 +156,80 @@ class Communicator():
 
 
         _sock.close()
+
+
+    def create_packets(self, data, tag):
+        '''Segments a chunk of data (payload) into separate packets in order to send in sequence to the desired address.
+
+        The messages sent using this class are encoded JSON objects, that include metadata, so in order to segment into the correct number of packets we also need to calculate the size of the packet overhead (metadata) as well as subtract the IP headers in order to find the maximal amount of payload data we can send in a single packet.
+
+        We need to use the MTU in this case which we'll take as typically a minimum of 576 bytes. According to RFC 791 the maximum IP header size is 60 bytes (typically 20), and according to RFC 768, the UDP header size is 8 bytes. This leaves the bare minimum payload size to be 508 bytes. (576 - 64 - 8).
+
+        The packet payloads are implemented as JSON objects
+
+        ```
+        payload = {
+            't': ...,
+            'd': ...,
+            's': ...,
+            'n': ...
+        }
+        ```
+
+        The different fields are defined as follows:
+
+        - ``t`` is the tag for the data
+        - ``d`` is the actual data we wish to send
+        - ``s`` is the number total number of sequence packets
+        - ``n`` is the sequence number of the packet.
+
+        Args:
+            data (str): The data as a string which is meant to be sent to its destination
+        
+        Returns
+            list: A list containing the payload for the packets which should be sent to the destination.
+        '''
+        packets = []
+        max_payload = self.mtu - 60 - 8 # conservative estimate to prevent IP fragmenting
+        
+        # Typical non-sequenced payload metadata
+        payload = {'t': tag,
+                    'd': ''}
+        
+        # First check the data size
+        payload_size = get_payload_size(payload)
+        data_bytes = str(data).encode('utf-8') # Could definitely be more efficient. Lots of whitespace esp. with lists/dicts also terrible with floats...we should find a better way to do this....
+        data_size = len(data_bytes)
+        # print(payload_size)
+        # print(data_size)
+        # print(payload_size + data_size)
+        # print(max_payload)
+
+        # TWO CASES
+        # We can send everything in 1 packet
+        # We must break into multiple packets which will require sequencing
+        
+        if(data_size + payload_size <= max_payload):
+            # Assemble the packet, no sequencing
+            payload['d'] = data_bytes
+            packets.append(payload)
+        else:
+            # we need to add some more metadata for sequencing
+            payload['s'] = 0 # number of packets to 0
+            payload['n'] = 0 # sequence number to 0
+
+            # Next step  --> Calculate number of packets req'd and build them
+
+            # payload_size = get_payload_size(payload)
+            # print(payload_size)
+            # print(payload_size + data_size)
+            # print(max_payload)
+
+
+        return packets
+
+
+
 
     def send(self, ip, data, tag):
         '''Send a chunk of data with a specific tag to an ip address
@@ -150,6 +267,8 @@ class Communicator():
             self.is_listening = False
             self.listen_thread.join()
             self.listen_thread = None
+
+
 
     def receive(self, data, addr):
         '''Take a piece of data received over the socket and process the data and attempt to combine packet sequences together, passing them to the data store when ready.
