@@ -1,6 +1,7 @@
 .vscode*
 # python files
 *.pyc
+**/docs/_build/**
 
 # Windows image file caches
 Thumbs.db
