@@ -1,7 +1,7 @@
-cloud-ksvd.CloudKSVD module
+cloud_ksvd.CloudKSVD module
 ===========================
 
-.. automodule:: cloud-ksvd.CloudKSVD
+.. automodule:: cloud_ksvd.CloudKSVD
     :members:
     :undoc-members:
     :show-inheritance:

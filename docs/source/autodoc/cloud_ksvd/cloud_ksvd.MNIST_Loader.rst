@@ -1,7 +1,7 @@
-cloud-ksvd.MNIST_Loader module
+cloud_ksvd.MNIST_Loader module
 ==============================
 
-.. automodule:: cloud-ksvd.MNIST_Loader
+.. automodule:: cloud_ksvd.MNIST_Loader
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,4 +1,9 @@
-import socket, threading, time, json, math, struct
+import socket
+import threading
+import time
+import json
+import math
+import struct
 
 def get_mtu():
     '''Attempts to return the MTU for the network by finding the min of the first hop MTU and 576 bytes. i.e min(MTU_fh, 576)
@@ -264,7 +269,7 @@ class Communicator():
 
         packets = self.create_packets(data, tag)
         for packet in packets:
-            self.send_sock.sendto(packet, ip)
+            self.send_sock.sendto(packet, (ip, self.send_port))
         
         return True
 

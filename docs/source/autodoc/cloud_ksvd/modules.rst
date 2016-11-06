@@ -1,7 +1,7 @@
-cloud-ksvd
+cloud_ksvd
 ==========
 
 .. toctree::
    :maxdepth: 4
 
-   cloud-ksvd
+   cloud_ksvd

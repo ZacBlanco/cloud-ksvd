@@ -1,7 +1,7 @@
-cloud-ksvd.ConsensusMethods module
+cloud_ksvd.ConsensusMethods module
 ==================================
 
-.. automodule:: cloud-ksvd.ConsensusMethods
+.. automodule:: cloud_ksvd.ConsensusMethods
     :members:
     :undoc-members:
     :show-inheritance:

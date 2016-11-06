@@ -1,10 +1,14 @@
-import unittest, sys, json, zlib, random, struct
+import unittest
+import sys
+import json
+import zlib
+import random
+import struct
+from unittest.mock import MagicMock, patch
 
 sys.path.append('..')
-
 import cloud_comm as comm
 from cloud_comm import Communicator
-import numpy as np
 
 
 class TestCommModuleMethods(unittest.TestCase):
@@ -85,14 +89,14 @@ class TestCommunicator(unittest.TestCase):
         with self.assertRaises(BrokenPipeError):
             c1.close()
 
-    def test_payload_size(self):
+    def test_payload(self):
         l = []
         for i in range(10):
             l.append(i)
         data = {'hello': 'world',
                 'test': l}
         data1 = json.dumps(data, separators=[':', ',']).encode('utf-8')
-        self.assertEqual(len(data1), comm.get_payload_size(data))
+        self.assertEqual(data1, comm.get_payload(data))
 
     def test_packet_create_single(self):
         l = []
@@ -148,10 +152,17 @@ class TestCommunicator(unittest.TestCase):
         c1.close()
 
         with self.assertRaises(BrokenPipeError):
-            c1.start_listen()
+            c1.listen()
 
         with self.assertRaises(BrokenPipeError):
-            c1.send(bytes(), 'lol')
+            c1.send(bytes(), 'lol', 'test')
+
+    def test_mocked_send(self):
+        c1 = Communicator('udp', 10001)
+
+        c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice')
+
+        c1.close()
 
         
         

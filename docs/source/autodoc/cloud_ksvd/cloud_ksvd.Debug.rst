@@ -1,7 +1,7 @@
-cloud-ksvd.Debug module
+cloud_ksvd.Debug module
 =======================
 
-.. automodule:: cloud-ksvd.Debug
+.. automodule:: cloud_ksvd.Debug
     :members:
     :undoc-members:
     :show-inheritance:

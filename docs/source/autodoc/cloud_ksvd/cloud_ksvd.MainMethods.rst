@@ -1,7 +1,7 @@
-cloud-ksvd.MainMethods module
+cloud_ksvd.MainMethods module
 =============================
 
-.. automodule:: cloud-ksvd.MainMethods
+.. automodule:: cloud_ksvd.MainMethods
     :members:
     :undoc-members:
     :show-inheritance:
