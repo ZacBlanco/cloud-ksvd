@@ -1,9 +1,10 @@
-import unittest, sys, json, zlib, random
+import unittest, sys, json, zlib, random, struct
 
 sys.path.append('..')
 
 import cloud_comm as comm
 from cloud_comm import Communicator
+import numpy as np
 
 
 class TestCommModuleMethods(unittest.TestCase):
@@ -98,14 +99,10 @@ class TestCommunicator(unittest.TestCase):
         for i in range(100):
             l.append(i)
         c1 = Communicator('UDP', 9090)
-        p1 = c1.create_packets(l, 't1')
+        l = str(l).encode('utf-8')
+        p1 = c1.create_packets(l, '9012')
         self.assertEqual(len(p1), 1)
-        self.assertEqual(len(p1[0].keys()), 2) #tag and data keys
         p1 = p1[0]
-        self.assertEqual('d' in p1, True)
-        dat_str = p1['d'].decode('utf-8')
-        self.assertEqual(l, json.loads(dat_str))
-        self.assertTrue(comm.get_payload_size(p1) < 508)
         c1.close()
 
     def test_large_packet(self):
@@ -113,8 +110,48 @@ class TestCommunicator(unittest.TestCase):
         d = []
         for i in range(1000):
             d.append(random.random())
-        c1.create_packets(d, 'tag1')
+        d = str(d).encode('utf-8')
+        packs = c1.create_packets(d, 'tag1')
+        r = bytes() # total data bytes
+        t = bytes()
+        for packet in packs:
+            # print("Packet Size: {}".format(len(packet)))
+            r += packet[8:]
+            t += packet
+            
+        # print(len(d))
+        # print(len(r))
+        self.assertEqual(len(d), len(r))
+        self.assertEqual(len(d), len(t) - 8*len(packs))
+        for i in range(len(packs)):
+            seq = struct.unpack('H', packs[i][2:4])[0]
+            t = struct.unpack('H', packs[i][0:2])[0]
+            self.assertEqual(seq, i)
+            self.assertEqual(t, len(packs) - 1)
+        c1.close()    
+
+    def test_single_packet(self):
+        c1 = Communicator('udp', 8080)
+        d = []
+        for i in range(122): # Exactly 500 bytes
+            d.append(i)
+        d = str(d).encode('utf-8')
+        d = c1.create_packets(d, '1111')
+        self.assertEqual(len(d), 1, 'Should have only created a single packet')
+        self.assertEqual('1111', d[0][4:8].decode('utf-8'))
+        self.assertEqual(0, struct.unpack('H', d[0][0:2])[0])
+        self.assertEqual(0, struct.unpack('H', d[0][2:4])[0])
         c1.close()
-    
 
+    def test_close_ops(self):
+        c1 = Communicator('UDP', 80)
+        c1.close()
 
+        with self.assertRaises(BrokenPipeError):
+            c1.start_listen()
+
+        with self.assertRaises(BrokenPipeError):
+            c1.send(bytes(), 'lol')
+
+        
+        

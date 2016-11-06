@@ -1,9 +1,11 @@
-import socket, threading, time, json
+import socket, threading, time, json, math, struct
 
 def get_mtu():
     '''Attempts to return the MTU for the network by finding the min of the first hop MTU and 576 bytes. i.e min(MTU_fh, 576)
 
-    Note that the 576 byte sized MTU does not account for the checksum/ip headers so when sending data we need to take the IP/headers/checksum into account.
+    Note that the 576 byte sized MTU does not account for the checksum/ip headers so when sending data we need to take the IP/protocol headers into account.
+
+    The current implementation just assumes the default minimum of 576. We should try to implement something to actually calculate min(MTU_fh, 576)
     '''
     return 576
 
@@ -26,8 +28,8 @@ def check_port(port):
     else:
         return True
 
-def get_payload_size(payload):
-    '''Take UDP payload and  calculate the size in bytes. Should be structured as a dict. Note this method is slightly expensive because it encodes a dictionary as a JSON string in order to calculate the length
+def get_payload(payload):
+    '''Take data payload and return a byte array of the object. Should be structured as a dict/list object. Note this method is slightly expensive because it encodes a dictionary as a JSON string in order to get the bytes
 
     We also set the separators to exclude spaces in the interest of saving data due to spaces being unnecessary
 
@@ -35,32 +37,41 @@ def get_payload_size(payload):
         payload(obj): A JSON serializable object representing the payload data
 
     Returns:
-        int: The size of the data in bytes of the payload
+        bytes: The object as a utf-8 encoded string
     '''
     data = json.dumps(payload, separators=[':', ',']).encode('utf-8')
-    return len(data)
+    return data
 
 
 class Communicator():
-    '''This is a threaded class interface designed to send and receive messages 'asynchronously' via pythons threading interface. It was designed mainly designed for use in communication for the algorithm termed 'Cloud K-SVD'.
+    '''This is a threaded class interface designed to send and receive messages 'asynchronously' via python's threading interface. It was designed mainly designed for use in communication for the algorithm termed 'Cloud K-SVD'.
 
-    This class provides the following methods
+    This class provides the following methods for users
 
     - listen: Starts the threaded listener
     - send: sends data via the open socket
     - get: retrieve data from the data-store
     - stop: stop listening on the thread
-    - receive: process and store information about received packets
+
+    Notes:
+    
+    - A limitation (dependent upon python implementation) is that threaded there may only be a single python thread running at one time due to GIL (Global Interpreter Lock)
+
+    - There is an intermediate step between receiving data and making it available to the user. The object must receive all packets in order to reconstruct the data into its original form in bytes. This is performed by the ``receive`` method.
+
+    - Data segments which have not been reconstructed lie within ``self.tmp_data``. Reconstructed data is within ``self.data_store``
+         
+
+
     '''
 
-    def __init__(self, protocol, listen_port, send_port=None, use_compression=True):
+    def __init__(self, protocol, listen_port, send_port=None):
         '''Constructor
 
         Args:
             protocol (str): A string. One of 'UDP' or 'TCP' (case insensistive)
             listen_port(int): A port between 0 and 65535
-            send_port(int): (Optional) Defaults to value set for listen_port, otherwise must be set to a valid port number.
-            use_compression (bool): A boolean representing the whether or not to use compression on packet transmission and decompression on received packets. 
+            send_port(int): (Optional) Defaults to value set for listen_port, otherwise must be set to a valid port number. 
         '''
         protocol = protocol.upper()
         if protocol not in ['TCP', 'UDP']:
@@ -83,12 +94,12 @@ class Communicator():
                 self.send_port = self.listen_port
                 self.send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-        self.use_compression = True
-
         # Set the defaults for the thread and listening object
         self.is_open = True
         self.listen_thread = None
         self.is_listening = False # This tells the listening thread whether or not it need to continue looping to receive messages
+        self.tmp_data = {}
+        self.data_store = {}
         self.mtu = get_mtu()
 
     def close(self):
@@ -116,7 +127,7 @@ class Communicator():
     
 
 
-    def start_listen(self):
+    def listen(self):
         '''Start listening on port ``self.listen_port``. Creates a new thread where the socket will be created
 
         Args:
@@ -157,110 +168,153 @@ class Communicator():
 
         _sock.close()
 
+    def build_meta_packet(self, seq_num, seq_total, tag):
+        '''Create a bytearray which returns a sequence of bytes based on the metadata
+
+        Args:
+            seq_num(int): The packet's sequence number
+            seq_total(int): The
+
+        Returns:
+            bytearray: A bytearray with the metadata
+        '''
+        if type(seq_total) != int or type(seq_num) != int:
+            raise TypeError("Sequence number and total must be integer") 
+        packet = bytearray()
+        packet += struct.pack('H', seq_total)
+        packet += struct.pack('H', seq_num)
+        packet += tag.encode('utf-8')[0:4]
+        return packet
 
     def create_packets(self, data, tag):
         '''Segments a chunk of data (payload) into separate packets in order to send in sequence to the desired address.
 
-        The messages sent using this class are encoded JSON objects, that include metadata, so in order to segment into the correct number of packets we also need to calculate the size of the packet overhead (metadata) as well as subtract the IP headers in order to find the maximal amount of payload data we can send in a single packet.
+        The messages sent using this class are simple byte arrays, which include metadata, so in order to segment into the correct number of packets we also need to calculate the size of the packet overhead (metadata) as well as subtract the IP headers in order to find the maximal amount of payload data we can send in a single packet.
 
-        We need to use the MTU in this case which we'll take as typically a minimum of 576 bytes. According to RFC 791 the maximum IP header size is 60 bytes (typically 20), and according to RFC 768, the UDP header size is 8 bytes. This leaves the bare minimum payload size to be 508 bytes. (576 - 64 - 8).
+        We need to use the MTU in this case which we'll take as typically a minimum of 576 bytes. According to RFC 791 the maximum IP header size is 60 bytes (typically 20), and according to RFC 768, the UDP header size is 8 bytes. This leaves the bare minimum payload size to be 508 bytes. (576 - 60 - 8).
 
-        The packet payloads are implemented as JSON objects
+        We will structure packets as such (not including IP/UDP headers)
 
-        ```
-        payload = {
-            't': ...,
-            'd': ...,
-            's': ...,
-            'n': ...
-        }
-        ```
+        +---------------------+--------------------+---------------+
+        | Seq.Total (2 bytes) | Seq. Num (2 bytes) | Tag (4 bytes) | 
+        +---------------------+--------------------+---------------+
+        |                      Data (500 Bytes)                    |
+        +----------------------------------------------------------+
 
-        The different fields are defined as follows:
+        A limitation is that we can only sequence a total of 2^16 packets which, given a max data size of 500 bytes gives us a maximum data transmission of (2^16)*500 ~= 33MB for a single request.
 
-        - ``t`` is the tag for the data
-        - ``d`` is the actual data we wish to send
-        - ``s`` is the number total number of sequence packets
-        - ``n`` is the sequence number of the packet.
+        Also note that the Seq Num. is zero-indexed so that the maximum sequence number (and the sequence total) will go up to ``len(packets) - 1``. Or in other words, 1 less than the number of packets.
 
         Args:
-            data (str): The data as a string which is meant to be sent to its destination
+            data (bytes): The data as a string which is meant to be sent to its destination
+            tag (str): A tag. Only the first 4 bytes (chars) are added as the tag.
         
         Returns
             list: A list containing the payload for the packets which should be sent to the destination.
         '''
         packets = []
         max_payload = self.mtu - 60 - 8 # conservative estimate to prevent IP fragmenting
-        
-        # Typical non-sequenced payload metadata
-        payload = {'t': tag,
-                    'd': ''}
-        
-        # First check the data size
-        payload_size = get_payload_size(payload)
-        data_bytes = str(data).encode('utf-8') # Could definitely be more efficient. Lots of whitespace esp. with lists/dicts also terrible with floats...we should find a better way to do this....
-        data_size = len(data_bytes)
-        # print(payload_size)
-        # print(data_size)
-        # print(payload_size + data_size)
-        # print(max_payload)
+        metadata_size = 8 # 8 bytes         
+        data_size = len(data)
+        max_data = max_payload - metadata_size
 
         # TWO CASES
-        # We can send everything in 1 packet
-        # We must break into multiple packets which will require sequencing
-        
-        if(data_size + payload_size <= max_payload):
+        # - We can send everything in 1 packet
+        # - We must break into multiple packets which will require sequencing
+        if(data_size <= max_data):
             # Assemble the packet, no sequencing
-            payload['d'] = data_bytes
+            payload = self.build_meta_packet(0, 0, tag)
+            payload += data
             packets.append(payload)
         else:
-            # we need to add some more metadata for sequencing
-            payload['s'] = 0 # number of packets to 0
-            payload['n'] = 0 # sequence number to 0
+            total_packets = math.ceil(data_size/max_payload)
+            tp1 = total_packets - 1
+            for i in range(total_packets): # [0, total_packets-1]
+                p1 = self.build_meta_packet(i, total_packets, tag)
 
-            # Next step  --> Calculate number of packets req'd and build them
-
-            # payload_size = get_payload_size(payload)
-            # print(payload_size)
-            # print(payload_size + data_size)
-            # print(max_payload)
-
-
+                # Slice data into ~500 byte packs 
+                d1 = data[i*max_data:(i+1)*max_data]
+                p1 += d1
+                packets.append(p1)
+            
+            p1 = self.build_meta_packet(total_packets, total_packets, tag)
+            min_bound = (total_packets) * max_data
+            d1 = data[min_bound:]
+            p1 += d1
+            packets.append(p1)
+            
         return packets
 
 
-
-
     def send(self, ip, data, tag):
-        '''Send a chunk of data with a specific tag to an ip address
+        '''Send a chunk of data with a specific tag to an ip address. The packet will be automatically chunked into N packets where N = ceil(bytes/(MTU-68))
 
         Args:
             ip (str): The hostname/ip to send to
-            data (obj): The data object to send
+            data (bytes): The bytes of data which will be sent to the other host.
             tag (str): An identifier for the 
+
+        Returns:
+            bool: True if all packets were created and sent successfully.
         '''
 
-        msg = str(d)
-        data = {
-            'tag': tag,
-            'content': msg
-        }
-        m = json.dumps(data)
-        bts = m.encode('utf-8')
-        print(len(bts))
-        #s.sendto(msg, (ip, self.send_port))
+        # As simple as just creating the packets and sending each one individually
+        if self.is_open != True:
+            raise BrokenPipeError('Socket was already closed by user')
+
+        packets = self.create_packets(data, tag)
+        for packet in packets:
+            self.send_sock.sendto(packet, ip)
+        
+        return True
 
         
     
-    def get(self, label, sender_name):
-        '''Get a key/tag combi value from the data store
+    def get(self, ip, tag):
+        '''Get a key/tag value from the data store. 
+
+        The data is only going to be located in the data store if every single packet for the given tag was received and able to be reassembled. Otherwise the incomplete data will reside in ``self.tmp_data``.
+
+        The ``self.data_store`` object has the following structure:
+
+        .. code-block:: javascript
+        
+            {
+                ip_address: {
+                    tag_1: data,
+                    tag_2: data2
+                }
+            }
+        
+        
+        Args:
+            ip (str): The ip address of the host we wish get data from
+            tag (str): The data tag for the message which is being received
+
+        Returns:
+            bytes: ``None`` if complete data is not found, Otherwise if found will return the data
+        
         '''
-        pass
+        data = None
+        if ip not in self.data_store:
+            data = None
+        elif tag not in self.data_store[ip]:
+            data = None
+        else:
+            data = self.data_store[ip][tag]
+
+        return data
 
     def stop_listen(self):
         '''Stop listening for new messages and close the socket.
 
         This will terminate the thread and join it back in.
+
+        Args:
+            N/A
+
+        Returns:
+            N/A
 
         '''
         if self.listen_thread !=  None:
@@ -271,7 +325,31 @@ class Communicator():
 
 
     def receive(self, data, addr):
-        '''Take a piece of data received over the socket and process the data and attempt to combine packet sequences together, passing them to the data store when ready.
+        '''Take a piece of data received over the socket and processes the data and attempt to combine packet sequences together, passing them to the data store when ready.
+
+        ``self.tmp_data`` is an object with the structure
+
+        .. code-block:: javascript
+        
+            {
+                ip_address: {
+                    tag_1: {
+                        'seq_total': Max_num_packets,
+                        'packets' = {
+                            1: packet_data_1,
+                            2: packet_data_2,
+                            ...
+                            ...
+                        }
+                    },
+                    tag_2: {
+                        ...
+                    }
+                },
+                ip_address_2 : {
+                    ...
+                }
+            }
 
         Args:
             data (bytes): a packet of data received over the socket to process
@@ -280,5 +358,43 @@ class Communicator():
         Returns:
             N/A
         '''
-        pass
+        if addr not in tmp_data:
+            tmp_data[addr] = {}
+        
+        # disassemble the packet
+        seq_total = struct.unpack('H', data[0:2])[0]
+        seq_num = struct.unpack('H', data[2:4])[0]
+        tag = data[4:8].decode('utf-8')
+        dat = data[8:]
+
+        # Create an entry for data_tag
+        if data_tag not in tmp_data[addr]:
+            tmp_data[addr][data_tag] = {}
+            tmp_data[addr][data_tag]['packets'] = {}
+            tmp_data[addr][data_tag]['seq_total'] = {}
+        elif seq_total != tmp_data[addr][data_tag]['seq_total']:
+            # If the tag existed, make sure the sequence total is equal to the current, otherwise throw away any packets we've already collected
+            tmp_data[addr][data_tag]['seq_total'] = seq_total
+            tmp_data[addr][data_tag]['packets'] = {}
+
+        tmp_data[addr][data_tag]['packets'][seq_num] = dat
+
+        num_packets = len(tmp_data[addr][data_tag]['packets']) 
+        if  num_packets == seq_total + 1: # seq_total is max index of 0-index based list.
+            # Reassmble the packets in order
+            reassmbled = bytes()
+            for i in range(seq_total):
+                reassembled += tmp_data[addr][data_tag]['packets'][i]
+            if addr not in self.data_store:
+                self.data_store[addr] = {}
+            self.data_store[addr][data_tag] = reassembled
+            self.tmp_data[addr][data_tag] = {}
+
+
+
+            
+
+        
+        
+
 
