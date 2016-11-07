@@ -226,6 +226,20 @@ class TestCommunicator(unittest.TestCase):
         time.sleep(0.1)
         c1.close()
         c1.receive.assert_called_with(d, '127.0.0.1')
+
+    def test_same_tag_send(self):
+
+
+        c1 = Communicator('udp', 9071)
+        for i in range(10):
+            msg = 'Iteration: {}'.format(i).encode('utf-8')
+            packets = c1.create_packets(msg, 'test')
+            for packet in packets:
+                c1.receive(packet, 'local')
+            self.assertEqual(c1.get('local', 'test').decode('utf-8'), msg.decode('utf-8'))
+            
+
+        c1.close()
         
         
 

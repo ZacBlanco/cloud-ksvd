@@ -410,7 +410,8 @@ class Communicator():
             self.tmp_data[addr][data_tag] = {}
             self.tmp_data[addr][data_tag]['packets'] = {}
             self.tmp_data[addr][data_tag]['seq_total'] = seq_total
-        elif seq_total != self.tmp_data[addr][data_tag]['seq_total']:
+
+        if seq_total != self.tmp_data[addr][data_tag]['seq_total'] or self.tmp_data[addr][data_tag]['seq_total'] == None:
             # If the tag existed, make sure the sequence total is equal to the current, otherwise throw away any packets we've already collected
             self.tmp_data[addr][data_tag]['seq_total'] = seq_total
             self.tmp_data[addr][data_tag]['packets'] = {}
@@ -427,7 +428,8 @@ class Communicator():
             if addr not in self.data_store:
                 self.data_store[addr] = {}
             self.data_store[addr][data_tag] = reassembled
-            self.tmp_data[addr][data_tag] = {}
+            self.tmp_data[addr][data_tag]['packets'] = {}
+            self.tmp_data[addr][data_tag]['seq_total'] = {}
 
 
 
