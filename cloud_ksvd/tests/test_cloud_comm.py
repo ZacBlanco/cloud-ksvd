@@ -223,8 +223,7 @@ class TestCommunicator(unittest.TestCase):
         d += d
         d += 'test'.encode('utf-8')
         d += l
-        time.sleep(0.01)
-        c1.receive.assert_called_with(d, '127.0.0.1')
+        time.sleep(0.1)
         c1.close()
         c1.receive.assert_called_with(d, '127.0.0.1')
         
