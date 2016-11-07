@@ -18,6 +18,5 @@ install:
 # command to run tests
 script:
  - cd cloud_ksvd/tests
- - python3 -m unittests
- 
+ - python3 -m unittest
  
