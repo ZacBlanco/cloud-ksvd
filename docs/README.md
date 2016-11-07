@@ -22,4 +22,4 @@ Assumes you're already in the `docs/` directory
 
 ## Viewing Documentation
 
-After running the commands above, you can 
+After running the commands above, you can navigate to `build/index.html` to view the documentation.

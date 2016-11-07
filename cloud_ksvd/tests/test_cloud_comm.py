@@ -4,6 +4,7 @@ import json
 import zlib
 import random
 import struct
+import time
 from unittest.mock import MagicMock, patch
 
 sys.path.append('..')
@@ -157,12 +158,79 @@ class TestCommunicator(unittest.TestCase):
         with self.assertRaises(BrokenPipeError):
             c1.send(bytes(), 'lol', 'test')
 
-    def test_mocked_send(self):
+    @patch('socket.socket.sendto', side_effect=[1, -1, 5, -1])
+    def test_mocked_send(self, mock1):
         c1 = Communicator('udp', 10001)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), True)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), False)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), True)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), False)
+        c1.close()
 
-        c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice')
+    @patch('socket.socket.sendto', return_value=5)
+    def test_big_mock_send(self, mock1):
+        l = str(list(range(1000))).encode('utf-8')
+        c1 = Communicator('udp', 10001)
+        self.assertEqual(c1.send('abc1213', l, 'big_'), True)
+        mock1.return_value=-1
+        self.assertEqual(c1.send('abc1213', l, 'big_'), False)
+        c1.close()
+    
+
+    def test_get(self):
+        # Encodes and decodes a single packet.
+        c1 = Communicator('udp', 10001)
+        l = str(list(range(100))).encode('utf-8')
+        for packet in c1.create_packets(l, '_get'):
+            c1.receive(packet, 'test')
+        r = c1.get('test', '_get')
+        self.assertNotEqual(r, None)
+        self.assertEqual(l, r, 'Reassembled bytes should be the same.')
+        c1.close()
+
+    def test_create_large(self):
+        # This test helped to fix a bug where we were accidentally appending an extra blank packet when creating packets
+        c1 = Communicator('udp', 10001)
+        l = str(list(range(550))).encode('utf-8')
+        packets = c1.create_packets(l, '_get')
+        self.assertEqual(len(packets), 6)
 
         c1.close()
+
+    def test_large_get(self):
+        # This test assures that packets split into multiple pieces and received are able to be reassembled corectly.
+        c1 = Communicator('udp', 10001)
+        l = str(list(range(1000))).encode('utf-8')
+        # print(l)
+        packets = c1.create_packets(l, '_get')
+        for packet in packets:
+            c1.receive(packet, 'test')
+        r = c1.get('test', '_get')
+        self.assertNotEqual(r, None)
+        self.assertEqual(l, r, 'Reassembled bytes should be the same.')
+        c1.close()
+
+    def test_mock_listen(self):
+
+        c1 = Communicator('udp', 9071)
+        c1.listen()
+        self.assertNotEqual(c1.listen_thread, None)
+        self.assertEqual(c1.is_listening, True)
+        l = str(list(range(20))).encode('utf-8')
+        c1.receive = MagicMock()
+        c1.send('127.0.0.1', l, 'test')
+        d = struct.pack('H', 0)
+        d += d
+        d += 'test'.encode('utf-8')
+        d += l
+        time.sleep(0.01)
+        c1.receive.assert_called_with(d, '127.0.0.1')
+        c1.close()
+        c1.receive.assert_called_with(d, '127.0.0.1')
+        
+        
+
+
 
         
         

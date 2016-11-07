@@ -5,19 +5,25 @@ import json
 import math
 import struct
 
+TAG_SIZE = 4
+SEQ_SIZE = 2
+
 def get_mtu():
     '''Attempts to return the MTU for the network by finding the min of the first hop MTU and 576 bytes. i.e min(MTU_fh, 576)
 
     Note that the 576 byte sized MTU does not account for the checksum/ip headers so when sending data we need to take the IP/protocol headers into account.
 
     The current implementation just assumes the default minimum of 576. We should try to implement something to actually calculate min(MTU_fh, 576)
+
+    Returns:
+        int: 576
     '''
     return 576
 
 def check_port(port):
     '''Checks if a port is valid.
 
-    A port is restricted to be a 16 bit integer which is in the range 0 < port < 65535. Typically most application will use ports > ~5000
+    A port is restricted to be a 16 bit integer which is in the range 0 < port < 65535. Typically most applications will use ports > ~5000
 
     Args:
         port (int): The port number. ValueError raised if it is not an int.
@@ -36,7 +42,7 @@ def check_port(port):
 def get_payload(payload):
     '''Take data payload and return a byte array of the object. Should be structured as a dict/list object. Note this method is slightly expensive because it encodes a dictionary as a JSON string in order to get the bytes
 
-    We also set the separators to exclude spaces in the interest of saving data due to spaces being unnecessary
+    We also set the separators to exclude spaces in the interest of saving data due to spaces being unnecessary. This is a primitive way to convert data into bytes and you can load it 
 
     Args:
         payload(obj): A JSON serializable object representing the payload data
@@ -47,6 +53,18 @@ def get_payload(payload):
     data = json.dumps(payload, separators=[':', ',']).encode('utf-8')
     return data
 
+def decode_payload(payload):
+    '''Takes a byte array and converts it into an object using ``json.loads``
+
+    Args:
+        payload (bytearray): An array of bytes to decode and convert into an object.
+
+    Returns:
+        dict/list: A dictionary or list object depending on the JSON that was encoded
+    '''
+
+    data = json.loads(payload.decode('utf-8'), separator([':', ',']))
+    return data
 
 class Communicator():
     '''This is a threaded class interface designed to send and receive messages 'asynchronously' via python's threading interface. It was designed mainly designed for use in communication for the algorithm termed 'Cloud K-SVD'.
@@ -58,6 +76,17 @@ class Communicator():
     - get: retrieve data from the data-store
     - stop: stop listening on the thread
 
+    The typical sequence will be something like the following:
+
+    1. Take the object you wish to send. Encode it to bytes. i.e. ``my_bytes = str([1, 2, 3, 4, 5]).encode('utf-8')``
+    2. After encoding to bytes and creating a communicator, use ``send()`` in order to send it to the listening host. The methods here will take care of packet fragmenting and makes sure messages are reassembled correctly. You must also add a 'tag' to the data. It should be a 4-byte long identifier. For strings this is limited to 4 characters. Anything longer than 4 is truncated
+      - ``comm.send('IP_ADDRESS', my_bytes, 'tag1')``
+    3. After sending, there's nothing else for the client to do'
+    4. When the packet reaches the other end, each packet is received and catalogged. Once all of the pieces of a message are received, the message is transferred as a whole to the data store where it can be retrieved
+    5. Use ``get()`` to retrieve the message from the sender and by tag. ``comm.get('ip', 'tag1')``
+
+    As simple as that!
+
     Notes:
     
     - A limitation (dependent upon python implementation) is that threaded there may only be a single python thread running at one time due to GIL (Global Interpreter Lock)
@@ -66,18 +95,17 @@ class Communicator():
 
     - Data segments which have not been reconstructed lie within ``self.tmp_data``. Reconstructed data is within ``self.data_store``
          
+    Constructor Docs
 
+    Args:
+        protocol (str): A string. One of 'UDP' or 'TCP' (case insensistive)
+        listen_port(int): A port between 0 and 65535
+        send_port(int): (Optional) Defaults to value set for listen_port, otherwise must be set to a valid port number. 
 
     '''
 
     def __init__(self, protocol, listen_port, send_port=None):
-        '''Constructor
-
-        Args:
-            protocol (str): A string. One of 'UDP' or 'TCP' (case insensistive)
-            listen_port(int): A port between 0 and 65535
-            send_port(int): (Optional) Defaults to value set for listen_port, otherwise must be set to a valid port number. 
-        '''
+        '''Constructor'''
         protocol = protocol.upper()
         if protocol not in ['TCP', 'UDP']:
             raise ValueError('Protocol must be one of "TCP" or "UDP"')
@@ -99,6 +127,7 @@ class Communicator():
                 self.send_port = self.listen_port
                 self.send_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
+        self.listen_sock.setblocking(False) # Set to nonblocking in order to get our threaded server to work :) (We should investigate the performance impact of this)
         # Set the defaults for the thread and listening object
         self.is_open = True
         self.listen_thread = None
@@ -146,7 +175,7 @@ class Communicator():
             raise BrokenPipeError('Cannot listen. Sockets were previously closed.')
 
         if self.listen_thread == None: # Create thread if not already created
-            self.listen_thread = threading.Thread(target=__run_thread__, args=(self, self.listen_sock, '', self.listen_port))
+            self.listen_thread = threading.Thread(target=self.__run_listen__, args=(self.listen_sock, '', self.listen_port))
             self.is_listening = True
             self.listen_thread.start()
         
@@ -167,8 +196,11 @@ class Communicator():
         _sock.bind((host, port))
 
         while self.is_listening:
-            data, addr = _sock.recv(1024) # Receive at max 1024 bytes
-            self.receive(data, addr)
+            try:
+                data, addr = _sock.recvfrom(1024) # Receive at max 1024 bytes
+                self.receive(data, addr[0])
+            except BlockingIOError:
+                pass
 
 
         _sock.close()
@@ -232,7 +264,7 @@ class Communicator():
             payload += data
             packets.append(payload)
         else:
-            total_packets = math.ceil(data_size/max_payload)
+            total_packets = math.floor(data_size/max_payload)
             tp1 = total_packets - 1
             for i in range(total_packets): # [0, total_packets-1]
                 p1 = self.build_meta_packet(i, total_packets, tag)
@@ -241,7 +273,7 @@ class Communicator():
                 d1 = data[i*max_data:(i+1)*max_data]
                 p1 += d1
                 packets.append(p1)
-            
+            # Build the  final packet 
             p1 = self.build_meta_packet(total_packets, total_packets, tag)
             min_bound = (total_packets) * max_data
             d1 = data[min_bound:]
@@ -267,11 +299,12 @@ class Communicator():
         if self.is_open != True:
             raise BrokenPipeError('Socket was already closed by user')
 
+        ret = True
         packets = self.create_packets(data, tag)
         for packet in packets:
-            self.send_sock.sendto(packet, (ip, self.send_port))
-        
-        return True
+            if (self.send_sock.sendto(packet, (ip, self.send_port)) < 0 ):
+                ret = False
+        return ret
 
         
     
@@ -363,33 +396,34 @@ class Communicator():
         Returns:
             N/A
         '''
-        if addr not in tmp_data:
-            tmp_data[addr] = {}
+        if addr not in self.tmp_data:
+            self.tmp_data[addr] = {}
         
         # disassemble the packet
         seq_total = struct.unpack('H', data[0:2])[0]
         seq_num = struct.unpack('H', data[2:4])[0]
-        tag = data[4:8].decode('utf-8')
+        data_tag = data[4:8].decode('utf-8')
         dat = data[8:]
 
         # Create an entry for data_tag
-        if data_tag not in tmp_data[addr]:
-            tmp_data[addr][data_tag] = {}
-            tmp_data[addr][data_tag]['packets'] = {}
-            tmp_data[addr][data_tag]['seq_total'] = {}
-        elif seq_total != tmp_data[addr][data_tag]['seq_total']:
+        if data_tag not in self.tmp_data[addr]:
+            self.tmp_data[addr][data_tag] = {}
+            self.tmp_data[addr][data_tag]['packets'] = {}
+            self.tmp_data[addr][data_tag]['seq_total'] = seq_total
+        elif seq_total != self.tmp_data[addr][data_tag]['seq_total']:
             # If the tag existed, make sure the sequence total is equal to the current, otherwise throw away any packets we've already collected
-            tmp_data[addr][data_tag]['seq_total'] = seq_total
-            tmp_data[addr][data_tag]['packets'] = {}
+            self.tmp_data[addr][data_tag]['seq_total'] = seq_total
+            self.tmp_data[addr][data_tag]['packets'] = {}
 
-        tmp_data[addr][data_tag]['packets'][seq_num] = dat
+        self.tmp_data[addr][data_tag]['packets'][seq_num] = dat
 
-        num_packets = len(tmp_data[addr][data_tag]['packets']) 
+        num_packets = len(self.tmp_data[addr][data_tag]['packets']) 
+        # print(self.tmp_data[addr][data_tag]['packets'].keys())
         if  num_packets == seq_total + 1: # seq_total is max index of 0-index based list.
             # Reassmble the packets in order
-            reassmbled = bytes()
-            for i in range(seq_total):
-                reassembled += tmp_data[addr][data_tag]['packets'][i]
+            reassembled = bytes()
+            for i in range(num_packets):
+                reassembled += self.tmp_data[addr][data_tag]['packets'][i]
             if addr not in self.data_store:
                 self.data_store[addr] = {}
             self.data_store[addr][data_tag] = reassembled
