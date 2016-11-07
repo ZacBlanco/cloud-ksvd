@@ -1,0 +1,23 @@
+language: python
+python:
+  - "3.4"
+  - "3.5"
+notifications:
+ email:
+  recipients:
+   - zacdblanco@gmail.com
+  on_success: never
+  on_failure: always
+
+
+# command to install dependencies
+install: 
+ - sudo apt-get install -y python3-numpy python3-scipy openmpi-bin openmpi-common libopenmpi-dev
+ - pip install -r requirements.txt
+ 
+# command to run tests
+script:
+ - cd cloud_ksvd/tests
+ - python3 -m unittests
+ 
+ 
