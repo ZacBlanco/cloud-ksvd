@@ -210,20 +210,27 @@ class TestCommunicator(unittest.TestCase):
         self.assertEqual(l, r, 'Reassembled bytes should be the same.')
         c1.close()
 
-    def test_mock_listen(self):
-
-        c1 = Communicator('udp', 9071)
-        c1.listen()
-        self.assertNotEqual(c1.listen_thread, None)
-        self.assertEqual(c1.is_listening, True)
+    @patch('socket.socket.recvfrom')
+    def test_mock_listen(self, mock1):
         l = str(list(range(20))).encode('utf-8')
-        c1.receive = MagicMock()
-        c1.send('127.0.0.1', l, 'test')
         d = struct.pack('H', 0)
         d += d
         d += 'test'.encode('utf-8')
         d += l
-        time.sleep(0.1)
+        mock1.return_value = (d, ('127.0.0.1', 9071))
+        c1 = Communicator('udp', 9071)
+        c1.listen()
+        self.assertNotEqual(c1.listen_thread, None)
+        self.assertEqual(c1.is_listening, True)
+        c1.receive = MagicMock()
+        c1.send('127.0.0.1', l, 'test')
+        
+        # Give some time for the other thread to run before checking conditions
+        ctr = 0
+        while mock1.called != True and c1.receive.called != True and ctr < 20:
+            time.sleep(0.1)
+        
+        mock1.assert_called_with(1024)
         c1.close()
         c1.receive.assert_called_with(d, '127.0.0.1')
 
