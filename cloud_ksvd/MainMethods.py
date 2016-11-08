@@ -16,7 +16,6 @@ def time_sync(tic,wait_period): #Simpler to use MPI barrier command, but that's 
     #time before the network continues with the rest of its commands
     current = time.time()
     while current<(tic+wait_period): 
-        # print 'waiting...'
         time.sleep(0.1)
         current = time.time()  
 
@@ -36,8 +35,8 @@ def discoverDegrees(c,comm,node_names):
     #Necesary to know degrees of neighbors for Metropolis-Hastings Weights
     rank = MPI.COMM_WORLD.Get_rank()
     size = MPI.COMM_WORLD.Get_size()
-    print "I am %s, my degree is: %d" % (node_names[rank], 
-        c.Get_neighbors_count(rank)) , " and my neighbors are: ", c.Get_neighbors(rank)
+    print("I am %s, my degree is: %d" % (node_names[rank], 
+        c.Get_neighbors_count(rank)) , " and my neighbors are: ", c.Get_neighbors(rank))
 
     #Degree matrix
     degrees = np.zeros(size)
@@ -48,7 +47,7 @@ def discoverDegrees(c,comm,node_names):
         comm.send(c.Get_neighbors_count(rank)+1,x, tag=7)
         degrees[x] = comm.recv(source=x, tag=7)
 
-    print "I am %s, my degree matrix is: " % (node_names[rank]) , degrees
+    print("I am %s, my degree matrix is: " % (node_names[rank]) , degrees)
 
     return degrees
 
@@ -61,7 +60,7 @@ def OMP(D,Y,L):
     A = np.matrix('')
 
     if(N != Y.shape[0]):
-        print "Feature-size does not match!"
+        print("Feature-size does not match!")
         return
 
     for k in range(0,P):
@@ -106,14 +105,14 @@ def CloudKSVD(D,Y,refvec,tD,t0,tc,tp,weights,comm,c,node_names,Tag,
     for t in xrange(0,tD): #iterations of kSVD
 
         if rank == 0:
-            print '=================Iteration %d=================' % (t+1)
+            print('=================Iteration %d=================' % (t+1))
 
         for s in xrange(0,S):
             x[:,s] = OMP(D,Y[:,s],t0)
 
         for k in xrange(0,K):
             if rank == 0:
-                print 'Updating atom %d' % (k+1)
+                print('Updating atom %d' % (k+1))
             #Error matrix
             wk = [i for i,a in enumerate((np.array(x[k,:])).ravel()) if a!=0]
             Ek = (Y-np.dot(D,x)) + (D[:,k]*x[k,:])
@@ -139,7 +138,7 @@ def CloudKSVD(D,Y,refvec,tD,t0,tc,tp,weights,comm,c,node_names,Tag,
 
         #Error Data
         rerror[t] =np.linalg.norm(Y-np.dot(D,x))
-        print "Node %s Iteration %d error:" % (node_names[rank],t+1) , rerror[t]
+        print("Node %s Iteration %d error:" % (node_names[rank],t+1) , rerror[t])
         time.sleep(0.2)
 
     return D,x,rerror

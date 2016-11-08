@@ -1,7 +1,7 @@
 from mnist import MNIST
 import numpy as np
 import pickle, os
-import Image
+from PIL import Image
 
 def resize(images,resolution):
     atoms = np.shape(images)[0]
@@ -43,9 +43,9 @@ def organize(samples,labels,classes,amount):
 
 
 def importMNIST(folder,resolution,classes,amount,signals):
-    print 'importing MNIST data...'
+    print('importing MNIST data...')
     if os.path.isfile('saved_DY.pkl'):
-        print 'found file'
+        print('found file')
         f = open('saved_DY.pkl','r')
         D = pickle.load(f)
         D_labels = pickle.load(f)
@@ -56,20 +56,20 @@ def importMNIST(folder,resolution,classes,amount,signals):
 
     mndata = MNIST(folder)
     train_ims,train_labels = mndata.load_training()
-    print 'training loaded'
+    print('training loaded')
     test_ims,test_labels = mndata.load_testing()
-    print 'testing loaded'
+    print('testing loaded')
 
     training_samples = resize(np.array(train_ims),resolution)
     training_labels = np.array(train_labels)
     D,D_labels = organize(training_samples,training_labels,classes,amount)
-    print 'dictionary, D, made'
+    print('dictionary, D, made')
 
     random_idx = np.array(np.random.permutation(10000))[0:signals] #10000 is total signals avail
 
     Y = (resize(np.array(test_ims),resolution))[:,random_idx]
     Y_labels = np.array(test_labels)[random_idx]
-    print 'signals, Y, made'
+    print('signals, Y, made')
 
     saveToFile(D,D_labels,Y,Y_labels)
 

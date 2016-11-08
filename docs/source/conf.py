@@ -1,6 +1,6 @@
 import sys
 sys.path.append('../')
-sys.path.append('../cloud-ksvd')
+sys.path.append('../cloud_ksvd')
 # -*- coding: utf-8 -*-
 #
 # Cloud K-SVD documentation build configuration file, created by
@@ -91,7 +91,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This patterns also effect to html_static_path and html_extra_path
-exclude_patterns = []
+exclude_patterns = ['**/tests/**']
 
 # The reST default role (used for this markup: `text`) to use for all
 # documents.
