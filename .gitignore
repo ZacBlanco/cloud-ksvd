@@ -2,6 +2,7 @@
 # python files
 *.pyc
 **/docs/build/**
+venv/**
 
 # Windows image file caches
 Thumbs.db

@@ -80,7 +80,10 @@ class Communicator():
 
     1. Take the object you wish to send. Encode it to bytes. i.e. ``my_bytes = str([1, 2, 3, 4, 5]).encode('utf-8')``
     2. After encoding to bytes and creating a communicator, use ``send()`` in order to send it to the listening host. The methods here will take care of packet fragmenting and makes sure messages are reassembled correctly. You must also add a 'tag' to the data. It should be a 4-byte long identifier. For strings this is limited to 4 characters. Anything longer than 4 is truncated
+    
       - ``comm.send('IP_ADDRESS', my_bytes, 'tag1')``
+    
+
     3. After sending, there's nothing else for the client to do'
     4. When the packet reaches the other end, each packet is received and catalogged. Once all of the pieces of a message are received, the message is transferred as a whole to the data store where it can be retrieved
     5. Use ``get()`` to retrieve the message from the sender and by tag. ``comm.get('ip', 'tag1')``
