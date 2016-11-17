@@ -1,17 +1,14 @@
 # Quick-Start Guide
 
+This implementation of Cloud K-SVD is built to run with python3.
+
+You must have python3 and pip3 (`sudo apt-get install python3-pip`) installed
+
 ### Install Dependencies
 
 ```
-sudo apt-get install -y python-numpy python-scipy  python-nose
-
-sudo pip install -r requirements.txt
-```
-
-Run the manager server with 
-
-```
-python3 run_manager.py
+sudo apt-get install -y python3-numpy python3-scipy openmpi-bin openmpi-common libopenmpi-dev
+sudo pip3 install -r requirements.txt
 ```
 
 

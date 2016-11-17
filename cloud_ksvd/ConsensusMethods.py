@@ -1,3 +1,13 @@
+'''This file contains functions for using distributed consensus methods such as Corrective Consensus[1] and Accelerated Corrective Consensus[2]
+
+
+
+- [1] <http://vision.jhu.edu/assets/consensus-cdc10.pdf>
+- [2] <http://www.vision.jhu.edu/assets/ChenACC11.pdf>
+
+
+'''
+
 from mpi4py import MPI
 from random import randint
 import numpy as np
