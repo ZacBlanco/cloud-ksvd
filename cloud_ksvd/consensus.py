@@ -94,8 +94,10 @@ def transmitData(z,comm_worldObject,graphObject,node_names,transmissionTag,timeO
 	return data
 
 
-def correctiveConsensus(z,tc,weights,comm_worldObject,graphObject,node_names,
-						transmissionTag,CorrectiveSpacing,timeOut):
+def correctiveConsensus(z,tc,weights,comm_worldObject,graphObject,node_names, transmissionTag,CorrectiveSpacing,timeOut):
+	'''Run a version of distributed consensus
+	'''
+			
 	#Detailed in the paper- the proof presented in the paper is somewhat simple
 	#Figure it out, because this code is definitely not simple
 	datadim = z.shape[0]
