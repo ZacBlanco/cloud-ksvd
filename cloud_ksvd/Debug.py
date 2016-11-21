@@ -8,30 +8,48 @@ from MainMethods import *
 
 
 def start():
+    print "here 1"
     '''Start running a debugging version of the Cloud K-SVD Algorithm'''
     ## Network and Global Variable Setup
     comm = MPI.COMM_WORLD
+    print "here 2"
     comm1= MPI.Intracomm(comm)
+    print "here 3"
     rank = MPI.COMM_WORLD.Get_rank()
+    print "here 4"
     size = MPI.COMM_WORLD.Get_size()
+    print "here 5"
     name = MPI.Get_processor_name()
-    index = [4,8,12,16,20] 
+    print "here 6"
+    index = [4,8,12,16,20]
+    print "here 7" 
     edges = [1,2,3,4,0,2,3,4,0,1,3,4,0,1,2,4,0,1,2,3] #fully connected network!
+    print "here 8"
     c = comm1.Create_graph(index, edges, reorder = False) 
+    print "here 9"
     np.set_printoptions(precision=3)
+    print "here 10"
     node_names = list('ABCDE')
+    print "here 11"
     transmissionTag = 4
+    print "here 12"
     degrees = discoverDegrees(c,comm,node_names)
+    print "here 13"
     time.sleep(0.5) #keeps node outputs clean
+    print "here 14"
     weights = writeWeights(comm,c,degrees)
+    print "here 15"
 
     tic = time.time()
+    print "here 16"
 
     ##################################################
     ################ Debugging option ################
     option = ['transfer','consensus','power']
+    print "here 17"
     # Choose an option to test here
     test = option[2]
+    print "here 18"
     ##################################################
 
     # Various debug methods to test individual functions in "ConsensusMethods.py"
