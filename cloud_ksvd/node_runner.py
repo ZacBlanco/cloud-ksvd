@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 from configparser import ConfigParser
 from multiprocessing import Process, Value
 from flask import Flask, request
+from cloud_comm import Communicator
 
 app = Flask(__name__)
 task_running = Value('i', 0, lock=True) # 0 == False, 1 == True
@@ -48,8 +49,17 @@ def kickoff(task):
     '''
     # This the where we would need to do some node discovery, or use a pre-built graph
     # in order to notify all nodes they should begin running
+    global conf_file
     print("Processing for 5 seconds......")
-    time.sleep(5)
+    config = ConfigParser()
+    config.read(conf_file)
+    port = config['consensus']['udp_port']
+    c = Communicator('udp', int(port))
+    c.listen()
+    ########### Run Consensus Here ############
+    time.sleep(7)
+    ###########################################
+    c.stop_listen()
     print("Finished Processing")
     with task.get_lock():
         task.value = 0
