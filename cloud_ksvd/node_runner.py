@@ -73,7 +73,9 @@ def get_degree():
     global conf_file
     c = ConfigParser()
     c.read(conf_file)
-    o = urlparse(request.url).hostname
+    o = urlparse(request.url)
+    o = o.hostname
+    o = request.args.get('host')
     a = json.loads(c['graph']['nodes'])
     e = json.loads(c['graph']['edges'])
     try:
@@ -82,8 +84,6 @@ def get_degree():
         i = -1
         pass
     cnt = 0
-    i = int(request.args.get('ind'))
-
     # Print upper triangular matrix
     # for x in range(len(e)):
     #     print( x*3*' ' +  str(e[x]))
