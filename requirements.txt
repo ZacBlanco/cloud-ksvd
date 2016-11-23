@@ -1,3 +1,5 @@
 mpi4py
 python-mnist
 Pillow
+requests
+Flask

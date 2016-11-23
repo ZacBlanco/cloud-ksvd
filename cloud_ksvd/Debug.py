@@ -87,3 +87,5 @@ def start():
         time.sleep((rank+2)/2)
         print("%s: Eigenvector estimate reached: " % (node_names[rank]), (average))  
 
+if __name__ == "__main__":
+	start()

@@ -121,3 +121,6 @@ def start():
 	accuracy = float(sum(np.array(guesses)==np.array(actual)))/S  #classification accuracy
 
 	print("Node %s accuracy: %d%s" % (node_names[rank], accuracy*100,"%"))
+
+if __name__ == "__main__":
+	start()

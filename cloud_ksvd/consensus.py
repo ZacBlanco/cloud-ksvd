@@ -18,6 +18,11 @@ import time
 #Consensus Functions
 
 def writeWeights(comm,c,degrees):
+	'''Calculate the Metropolis Hastings weights for the current node and its neighbors.
+
+	Args:
+
+	'''
 	#Writes Metropolis-Hastings weights to a file
 	#Weights needed for consensus
 	rank = comm.Get_rank()
@@ -94,8 +99,10 @@ def transmitData(z,comm_worldObject,graphObject,node_names,transmissionTag,timeO
 	return data
 
 
-def correctiveConsensus(z,tc,weights,comm_worldObject,graphObject,node_names,
-						transmissionTag,CorrectiveSpacing,timeOut):
+def correctiveConsensus(z,tc,weights,comm_worldObject,graphObject,node_names, transmissionTag,CorrectiveSpacing,timeOut):
+	'''Run a version of distributed consensus
+	'''
+			
 	#Detailed in the paper- the proof presented in the paper is somewhat simple
 	#Figure it out, because this code is definitely not simple
 	datadim = z.shape[0]
@@ -142,6 +149,28 @@ def correctiveConsensus(z,tc,weights,comm_worldObject,graphObject,node_names,
 			CorrCount += 1
 
 	return qnew  #q(t) after processing
+
+def get_ip_address(ifname):
+	'''Returns the IP Address 
+
+	Should be friendly with python2 and python3. Tested using a Raspberry Pi running Linux.
+	Will not work with windows. Possibly with OS X/MacOS
+
+	Args:
+		ifname (str): Name of the network interface
+
+	Returns:
+		str: A string representing the 4x8 byte IPv4 address assigned to the interface.
+
+	Throws:
+		err: Will throw error if the interface doesn't exist. Use with method within try/catch.
+	'''
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(
+        s.fileno(),
+        0x8915,  # SIOCGIFADDR
+        struct.pack('256s', ifname.encode('utf-8')
+    ))[20:24])
 
 def powerMethod(M,tc,tp,weights,comm_worldObject,graphObject,node_names,
 						transmissionTag,CorrectiveSpacing,timeOut):
