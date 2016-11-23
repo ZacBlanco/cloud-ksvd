@@ -1,6 +1,7 @@
 import time
 import sys
 import json
+import requests
 from urllib.parse import urlparse
 from configparser import ConfigParser
 from multiprocessing import Process, Value
@@ -21,7 +22,7 @@ def run():
         N/A
 
     Returns:
-        str: A message detailing whether or not the consensus job was started or not.
+        str: A message detailing whether or not the consensus job was started.
     '''
     msg = ""
     global task_running
@@ -45,22 +46,34 @@ def run2():
     return "We can't run Cloud K-SVD quite yet. Please check back later."
 
 def kickoff(task):
-    '''The worker method for running distributed consensus. 
+    '''The worker method for running distributed consensus.
+
+        Args:
+            task (int): The process-shared value denoting whether the taks is running or not.
+
+        Returns
+            N/A
     '''
     # This the where we would need to do some node discovery, or use a pre-built graph
     # in order to notify all nodes they should begin running
     global conf_file
-    print("Processing for 5 seconds......")
+    # print("Processing for 5 seconds......")
     config = ConfigParser()
+    
     config.read(conf_file)
     port = config['consensus']['udp_port']
     c = Communicator('udp', int(port))
     c.listen()
+    ####### Notify Other Nodes to Start #######
+    port = config['node_runner']['port']
+    for node in json.loads(config['graph']['nodes']):
+        req_url = 'http://{}:{}/start/consensus'.format(node, port)
+        requests.get(req_url)
     ########### Run Consensus Here ############
     time.sleep(7)
     ###########################################
-    c.stop_listen()
-    print("Finished Processing")
+    c.close()
+    # print("Finished Processing")
     with task.get_lock():
         task.value = 0
 
