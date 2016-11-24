@@ -54,7 +54,7 @@ class test_node_runner(unittest.TestCase):
     def test_kickoff(self, mock2, mock1):
         task = n.task_running
         n.kickoff(task)
-        mock1.assertEqual(mock1.call_count, 5)
+        self.assertEqual(mock1.call_count, 5)
         mock1.assert_any_call('http://192.168.2.180:9090/start/consensus')
         mock1.assert_any_call('http://192.168.2.181:9090/start/consensus')
         mock1.assert_any_call('http://192.168.2.182:9090/start/consensus')
