@@ -248,6 +248,18 @@ class TestCommunicator(unittest.TestCase):
 
         c1.close()
         
+    def test_multi_get(self):
+
+        c1 = Communicator('udp', 9071)
+        s = bytes(str(range(1000)).encode('utf-8'))
+        pkts = c1.create_packets(s ,'tg11')
+        for pkt in pkts:
+            c1.receive(pkt, 'local')
+        s2 = c1.get('local', 'tg11')
+        self.assertEqual(s, s2, "Bytes should be able to be retrieved")
+        s2 = c1.get('local', 'tg11')
+        self.assertNotEqual(s2, s, "Should not be able to retrieve the same data again")
+        c1.close()
         
 
 
