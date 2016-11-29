@@ -52,14 +52,13 @@ class ConsensusTest(unittest.TestCase):
 
     @patch('requests.get', side_effect=[good_resp(2), good_resp(3), bad_resp()])
     def test_weights(self, mock1):
-        neighbors = ['192.168.2.180', '192.168.2.181', '127.0.0.1']
-        w = consensus.get_weights(neighbors, 2, 'params_test.conf')
+        neighbors = ['192.168.2.180', '192.168.2.181']
+        w = consensus.get_weights(neighbors, 'params_test.conf')
         self.assertEqual(w['192.168.2.180'], 1/3, 'Should have weight of 1/3')
         self.assertEqual(w['192.168.2.181'], 1/4, 'Deg of 3 Should have weight of 1/4')
-        self.assertEqual(w['127.0.0.1'], 0, 'No response neighbor should be 0')
         self.assertEqual(w['self'], 1-(1/3 + 1/4), "Self should have 1 - sum of other weights")
 
-        w = consensus.get_weights([], 2, 'params_test.conf')
+        w = consensus.get_weights([], 'params_test.conf')
         self.assertEqual(w['self'], 1, "No neighbors equals weight of 1")
         
 

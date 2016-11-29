@@ -21,12 +21,11 @@ from numpy import linalg as LA
 # Consensus Functions
 
 
-def get_weights(neighbors, degree, config="params.conf"):
+def get_weights(neighbors, config="params.conf"):
     '''Calculate the Metropolis Hastings weights for the current node and its neighbors.
 
     Args:
             neighbors (iterable): An iterable of neighbor IP addresses to get degrees from
-            degree (int): degree of the current node.
 
     Returns:
             dict: a dictionary mapping neighbors to Metropolis-Hastings Weights
@@ -37,13 +36,15 @@ def get_weights(neighbors, degree, config="params.conf"):
     conf = configparser.ConfigParser()
     conf.read(config)
     port = conf['node_runner']['port']
+    my_deg = len(neighbors)
     for neigh in neighbors:
         res = requests.get('http://{}:{}/degree'.format(neigh, port))
         if res.status_code == 200:
             degs[neigh] = int(res.text)
-            weights[neigh] = 1 / (max(degs[neigh], degree) + 1)
+            weights[neigh] = 1 / (max(degs[neigh], my_deg) + 1)
         else:
             weights[neigh] = 0
+            raise RuntimeError("One of the nodes could not be contacted")
 
     
     weights['self'] = 1 - sum(weights.values())
