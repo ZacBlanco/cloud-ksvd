@@ -100,12 +100,13 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
                     ind = neigh_list.index(j)
                     print(diff)
                     print(neighbors[j])
-                    phi[:,ind] += np.reshape(neighbors[j] * diff, (-1, 1))
+                    # phi[:,ind] += np.reshape(neighbors[j] * diff, (dim, 1))
 
             new_data = old_data + tempsum  # essentially doing consensus the long way
 
             # Corrective Iteration
         else:
+            pass
             delta = np.matrix(np.zeros((dim, size)))
             v = np.zeros(size)
 
