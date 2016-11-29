@@ -1,4 +1,5 @@
-'''This file contains functions for using distributed consensus methods such as Corrective Consensus[1] and Accelerated Corrective Consensus[2]
+'''This file contains functions for using distributed consensus methods such as
+ Corrective Consensus[1] and Accelerated Corrective Consensus[2]
 
 
 
@@ -7,188 +8,323 @@
 
 
 '''
-
-from mpi4py import MPI
-from random import randint
+import time
+import math
+import pickle
+import socket
+import struct
+import fcntl
+import requests
+import configparser
 import numpy as np
 from numpy import linalg as LA
-import csv
-import time
-
-#Consensus Functions
-
-def writeWeights(comm,c,degrees):
-	'''Calculate the Metropolis Hastings weights for the current node and its neighbors.
-
-	Args:
-
-	'''
-	#Writes Metropolis-Hastings weights to a file
-	#Weights needed for consensus
-	rank = comm.Get_rank()
-	size = comm.Get_size()
-	weights = np.zeros(size)
-	for x in (c.Get_neighbors(rank)):
-		weights[x] = 1/(max(degrees[x],degrees[rank])+1)
-		
-	weights[rank] = 1 - sum(weights[:])
-		
-	#with open('MHweights.csv','wb') as csvfile:
-	#	datawriter = csv.writer(csvfile,delimiter=',')
-	#	datawriter.writerow(weights)
-	return weights
-
-def transmitData(z,comm_worldObject,graphObject,node_names,transmissionTag,timeOut):
-	#Transmits data with time outs for messaging (only for data_size<=100)
-	comm,c = comm_worldObject,graphObject
-	size = comm.Get_size()
-	rank = comm.Get_rank()
-	data_size = np.shape(z)[0] #data_size refers to its dimension
-	data = [None]*size
-
-	if data_size<=100:
-		#transmits data repeatedly over the "timeOut" value 
-		transmit_data = z
-		status = [False]*size
-		receiver = [MPI.REQUEST_NULL]*size
-		retry = []
-		tic = time.time()
-		#sends out data and stores receiver objects
-		for j in c.Get_neighbors(rank):
-			comm.send(transmit_data,j,tag=transmissionTag)
-		for j in c.Get_neighbors(rank):
-			rectemp = comm.irecv(source=j,tag=transmissionTag)
-			receiver[j] = (rectemp)
-		#receiver objects constantly check for incoming data over timeOut period
-		time.sleep(0.050) #waits 50 ms for data by default
-		for j in c.Get_neighbors(rank):
-			status[j],data[j] = receiver[j].test() #status and data values
-		#list of neighbors that data has not been downloaded from yet
-		retry = [i for i, node_status in enumerate(status) if (node_status==False)]	
-
-		intialTime = time.time()
-		while (retry != []): #while there are receivers needing retries
-			for j in retry:
-				if (time.time()-intialTime) > timeOut:
-					#print "%s timing out on %s" % node_names[rank],node_names[j]
-					retry.remove(j) #remove from retry list after timeOut
-					break
-				else: 
-					status[j],data[j] = receiver[j].test()
-					if status[j]: #status will be rue if data was succesfully recv'd
-						retry.remove(j) #remove from retry list after receiving data
-			
-
-	else: #breaks up data into peices for transmitting, necesary for MPI transmissions
-		#recursive function, should only call itself (z_pieces) times in total
-		data = [ np.matrix(np.zeros((data_size,1))) ] * size #deals with none assignment
-		z_pieces = int(np.ceil(data_size/100))
-		working_nodes = c.Get_neighbors(rank)
-		for piece in xrange(0,z_pieces): #sends out data for each peice
-			data_fragment = z[piece*100:(piece+1)*100]
-			node_fragments = transmitData(data_fragment,comm_worldObject,graphObject,
-				node_names,transmissionTag,timeOut) #recursion with fragment
-			for j in working_nodes: #only checks 'working' nodes
-				if node_fragments[j] is None: #if one transmission from a node is messed up
-					working_nodes.remove(j)   #remove it from the working nodes list
-					data[j] = None 			  #'drop' the data whole
-				else: #otherwise just add the node's data fragment
-					data[j][piece*100:(piece+1)*100] = node_fragments[j]
-
-	data[rank] = z #its own data
-	return data
+# Consensus Functions
 
 
-def correctiveConsensus(z,tc,weights,comm_worldObject,graphObject,node_names, transmissionTag,CorrectiveSpacing,timeOut):
-	'''Run a version of distributed consensus
-	'''
-			
-	#Detailed in the paper- the proof presented in the paper is somewhat simple
-	#Figure it out, because this code is definitely not simple
-	datadim = z.shape[0]
-	rank = comm_worldObject.Get_rank()
-	size = comm_worldObject.Get_size()
-	q,qnew = (z),(z)
-	phi = np.matrix(np.zeros((datadim,size)))
-	CorrCount = 1
+def get_weights(neighbors, degree, config="params.conf"):
+    '''Calculate the Metropolis Hastings weights for the current node and its neighbors.
 
-	for consensusIteration in xrange(0,tc):
+    Args:
+            neighbors (iterable): An iterable of neighbor IP addresses to get degrees from
+            degree (int): degree of the current node.
 
-		#Regular Iteration 
-		if (consensusIteration != CorrCount*(CorrectiveSpacing+1)-1): 
-		    #set q(t) = q(t-1), remember qnew is from last iteration
-			q = qnew 
-			#transfer data
-			data = transmitData(qnew,comm_worldObject,graphObject,node_names,
-				transmissionTag,timeOut)
-			#Consensus
-			tempsum = 0 #used for tracking 'mass' transmitted
-			for j in graphObject.Get_neighbors(rank):
-				if (data[j] is not None): #if data was received, then...
-					difference = data[j]-q 
-					tempsum += weights[j]*(difference) #'mass' added to itself
-					phi[:,j] += np.reshape((weights[j]*(difference)),(datadim,1))
-			#update local data
-			qnew = q + tempsum #essentially doing consensus the long way
-			#Corrective Iteration
-		else:
-			Delta = np.matrix(np.zeros((datadim,size)))
-			v = (np.zeros(size))
-			#Mass distribution difference is transmitted
-			phidata = transmitData(phi[:,j],comm_worldObject,graphObject,node_names,
-				transmissionTag,timeOut)
-			#Mass distribution should be equivalent sent and received
-			for j in graphObject.Get_neighbors(rank):
-				if (phidata[j] != None): #if 'mass disr.' transmision was succesful
-					Delta[:,j] = phi[:,j] + phidata[j]
-					v[j] = 1
-			#ensures stability if packet loss during corrective transmission
-			phi[:,j] += (-0.5)*Delta[:,j]*v[j]
-			qnew += -(0.5)*np.reshape(np.sum(Delta,1),(datadim,1))
+    Returns:
+            dict: a dictionary mapping neighbors to Metropolis-Hastings Weights
 
-			CorrCount += 1
+    '''
+    weights = {}
+    degs = {}
+    conf = configparser.ConfigParser()
+    conf.read(config)
+    port = conf['node_runner']['port']
+    for neigh in neighbors:
+        res = requests.get('http://{}:{}/degree'.format(neigh, port))
+        if res.status_code == 200:
+            degs[neigh] = int(res.text)
+            weights[neigh] = 1 / (max(degs[neigh], degree) + 1)
+        else:
+            weights[neigh] = 0
 
-	return qnew  #q(t) after processing
+    
+    weights['self'] = 1 - sum(weights.values())
+    return weights
+
+
+def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
+    '''Run run corrective consensus v.s. a list of nodes in order to converge on an agreed-upon
+         average.
+
+    Args:
+            orig_data (matrix): The data which we want to find a consensus with (numpy matrix)
+            tc (int): Number of consensus iterations
+            tag_id (num): A numbered id for this consensus iteration. Used when sending tag info.abs
+            neighbors (dict): an object outlining the neighbors of the current node and the weights
+                         corresponding to each one.
+            corrective_spacing (number): The spacing parameter for corrective consensus
+            communicator (Communicator): The communicator object to send and receive messages.abs
+
+    Returns:
+            matrix: A numpy matrix with the agreed-upon consensus values.
+
+
+    '''
+    dim = orig_data.shape[0]  # rows
+    print(dim)
+    old_data = new_data = orig_data
+    size = len(neighbors)
+    phi = np.matrix(np.zeros((dim, size)))  # number of communicators
+    corr_count = 1
+    neigh_list = list(neighbors.keys())
+
+    for i in range(tc):
+        if i != corr_count * (corr_spacing + 1) - 1:
+            # set q(t) = q(t-1), remember qnew is from last iteration
+            old_data = new_data
+
+            # transfer data
+            tag = build_tag(tag_id, i)
+            b_data = matrix_to_bytes(new_data)
+            transmit(b_data, tag, neighbors, communicator)
+            data = receive(tag, neighbors, communicator)
+
+            # Consensus
+            tempsum = 0  # used for tracking 'mass' transmitted
+            for j in neighbors:
+                if data[j] != None:  # if data was received, then...
+                    t = matrix_from_bytes(data[j])
+                    diff = t - old_data
+                    tempsum += neighbors[j] * diff  # 'mass' added to itself
+                    # print('Neighbors[j] = {}'.format(neighbors[j]))
+                    # print("Diff {}".format(diff))
+                    ind = neigh_list.index(j)
+                    print(diff)
+                    print(neighbors[j])
+                    phi[:,ind] += np.reshape(neighbors[j] * diff, (-1, 1))
+
+            new_data = old_data + tempsum  # essentially doing consensus the long way
+
+            # Corrective Iteration
+        else:
+            delta = np.matrix(np.zeros((dim, size)))
+            v = np.zeros(size)
+
+            # Mass distribution difference is transmitted
+            tag = build_tag(tag_id + 1, i)  # 1 for corrective iteration
+            p_data = matrix_to_bytes(phi[:, j])
+            transmit(p_data, tag, neighbors, communicator)
+            phi_data = receive(tag, neighbors, communicator)
+
+            # Mass distribution should be equivalent sent and received
+            for j in neighbors:
+                if phi_data[j] != None:
+                    phi_data[j] = matrix_from_bytes(phi_data[j])
+                    ind = neigh_list.index(j)
+                    delta[:, ind] = phi[:, ind] + phi_data[j]
+                    v[j] = 1
+                phi[:, ind] += (-0.5) * delta[:, ind] * v[j]
+                # ensures stability if packet loss during corrective
+                # transmission
+                new_data += -(0.5) * np.reshape(np.sum(delta, 1), (dim, 1))
+
+            corr_count += 1
+
+        return new_data
+
+
+def matrix_to_bytes(data):
+    '''Convert a numpy matrix to an array of bytes to transfer
+     over the network*
+
+    *This is just a simple type of implementation. A reason one may
+    have for not using something as simple as the pickle library is
+     that unpickling data after it has been sent over the
+     network can be maliciously modified to execute arbitrary code when
+     being unpickled which inherntly presents a serious security hazard.
+     Anyone using this code in a security-concious environment should
+     replace the matrix_*_bytes pair of methods with a more suitable
+    implementation.
+
+    Args:
+            data (obj): Data to convert to bytes
+
+    Returns:
+            bytes: The data in a byte representation
+    '''
+    pick = pickle.dumps(data)
+    return pick
+
+
+def matrix_from_bytes(data):
+    '''Convert a byte array back into a numpy matrix.
+
+    Please refer to the * note under ``matrix_to_bytes``
+    about the security hazard that the pickling implementation
+    leaves.
+
+    Args:
+            data (bytes): An array of bytes to convert to a numpy
+             matrix
+
+    Returns:
+            obj: An numpy matrix which was originally represented as bytes.
+
+    '''
+    return pickle.loads(data)
+
+
+def transmit(data, tag, neighbors, communicator):
+    '''Send the data to every neighbor.
+
+    Args:
+            data (bytes): The bytes to transmit
+            tag (bytes): The bytes representing the tag for the data
+            neighbors (iterable): An iterable item containing the neighbors which we
+                         want to send data to
+            communicator (Communicator): The object used in sending and receiving data
+
+    Returns:
+            N/A
+    '''
+    for n in neighbors:
+        communicator.send(n, data, tag)
+
+
+def receive(tag, neighbors, communicator):
+    '''Attempt to retrieve the data from a set of neighbors
+
+    Args:
+            tag (bytes): a set of bytes identifying the data tag to retrieve
+            neighbors (iterable): a list or dictionary of neighbors to retrieve data from
+            communicator (Communicator): The communicator object which can access the data.
+
+    Returns:
+            dict: A dictionary mapping each neighbor to the data which is sent.
+    '''
+    d = {}
+    missing = 0
+    chk = []
+    for n in neighbors:
+        tmp = communicator.get(n, tag)
+        if tmp == None:
+            missing += 1
+            chk.append(n)
+        else:
+            d[n] = tmp
+
+    time.sleep(missing * .1) # Only attempt at synchronization we have so far
+    for n in chk:
+        d[n] = communicator.get(n, tag)
+
+    return d
+
+
+def build_tag(tag_id, num):
+    tag = (tag_id % 256).to_bytes(1, byteorder='little')
+    if num > 0:
+        bts = math.log(num, 2)  # number of bits required
+        bts = math.ceil(bts / 8)  # number of bytes required
+    else:
+        bts = 3
+    bts = max(3, bts)  # Should always give us at least 3 bytes to work with.
+    tag += num.to_bytes(bts, byteorder='little')[0:3]
+    return tag
+
+
+# def correctiveConsensus(z, tc, weights, comm_world_obj, graph_obj, node_names,
+#                         trans_tag, corr_spacing, timeout):
+#     '''Run a version of distributed consensus
+#     '''
+
+#     # Detailed in the paper- the proof presented in the paper is somewhat simple
+#     # Figure it out, because this code is definitely not simple
+#     datadim = z.shape[0]
+#     rank = comm_world_obj.Get_rank()
+#     size = comm_world_obj.Get_size()
+#     q, qnew = (z), (z)
+#     phi = np.matrix(np.zeros((datadim, size)))
+#     corr_count = 1
+
+#     for cons_iter in range(tc):
+
+#         # Regular Iteration
+#         if cons_iter != corr_count * (corr_spacing + 1) - 1:
+#             # set q(t) = q(t-1), remember qnew is from last iteration
+#             q = qnew
+#             # transfer data
+#             data = transmit_data(qnew, comm_world_obj, graph_obj, node_names,
+#                                  trans_tag, timeout)
+#             # Consensus
+#             tempsum = 0  # used for tracking 'mass' transmitted
+#             for j in graph_obj.Get_neighbors(rank):
+#                 if data[j] != None:  # if data was received, then...
+#                     difference = data[j] - q
+#                     # 'mass' added to itself
+#                     tempsum += weights[j] * (difference)
+#                     phi[:, j] += np.reshape((weights[j]
+#                                              * (difference)), (datadim, 1))
+#             # update local data
+#             qnew = q + tempsum  # essentially doing consensus the long way
+#             # Corrective Iteration
+#         else:
+#             Delta = np.matrix(np.zeros((datadim, size)))
+#             v = np.zeros(size)
+#             # Mass distribution difference is transmitted
+#             phidata = transmit_data(phi[:, j], comm_world_obj, graph_obj, node_names,
+#                                     trans_tag, timeout)
+#             # Mass distribution should be equivalent sent and received
+#             for j in graph_obj.Get_neighbors(rank):
+#                 if phidata[j] != None:  # if 'mass disr.' transmision was succesful
+#                     Delta[:, j] = phi[:, j] + phidata[j]
+#                     v[j] = 1
+#             # ensures stability if packet loss during corrective transmission
+#             phi[:, j] += (-0.5) * Delta[:, j] * v[j]
+#             qnew += -(0.5) * np.reshape(np.sum(Delta, 1), (datadim, 1))
+
+#             corr_count += 1
+
+#     return qnew  # q(t) after processing
+
 
 def get_ip_address(ifname):
-	'''Returns the IP Address 
+    '''Returns the IP Address
 
-	Should be friendly with python2 and python3. Tested using a Raspberry Pi running Linux.
-	Will not work with windows. Possibly with OS X/MacOS
+    Should be friendly with python2 and python3. Tested using a Raspberry Pi running Linux.
+    Will not work with windows. Possibly with OS X/MacOS
 
-	Args:
-		ifname (str): Name of the network interface
+    Args:
+            ifname (str): Name of the network interface
 
-	Returns:
-		str: A string representing the 4x8 byte IPv4 address assigned to the interface.
+    Returns:
+            str: A string representing the 4x8 byte IPv4 address assigned to the interface.
 
-	Throws:
-		err: Will throw error if the interface doesn't exist. Use with method within try/catch.
-	'''
+    Throws:
+            err: Will throw error if the interface doesn't exist. Use with method within try/catch.
+    '''
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    return socket.inet_ntoa(fcntl.ioctl(
+    ip = socket.inet_ntoa(fcntl.ioctl(
         s.fileno(),
         0x8915,  # SIOCGIFADDR
-        struct.pack('256s', ifname.encode('utf-8')
-    ))[20:24])
+        struct.pack('256s', ifname.encode('utf-8')))[20:24])
+    return ip
 
-def powerMethod(M,tc,tp,weights,comm_worldObject,graphObject,node_names,
-						transmissionTag,CorrectiveSpacing,timeOut):
-    #Calls on a Consensus method to figure out top eigenvector
+
+def power_method(M, tc, tp, weights, comm_world_obj, graph_obj, node_names,
+                 trans_tag, corr_spacing, timeout):
+    # Calls on a Consensus method to figure out top eigenvector
     datadim = M.shape[0]
-    rank = comm_worldObject.Get_rank()
-    size = comm_worldObject.Get_size()
-    q = np.matrix(np.ones((datadim,1)))
+    rank = comm_world_obj.Get_rank()
+    size = comm_world_obj.Get_size()
+    q = np.matrix(np.ones((datadim, 1)))
     qnew = q
-    phi = np.matrix(np.zeros((datadim,size)))
-    CorrCount = 1
+    phi = np.matrix(np.zeros((datadim, size)))
+    corr_count = 1
 
-    for powerIteration in range(0,tp,1):
-        qnew = (M*qnew) #We use corrective consensus here, regular consensus works too
-        qnew = correctiveConsensus(qnew,tc,weights,comm_worldObject,graphObject,node_names,
-						transmissionTag,CorrectiveSpacing,timeOut)
+    for powerIteration in range(0, tp, 1):
+        # We use corrective consensus here, regular consensus works too
+        qnew = (M * qnew)
+        qnew = correctiveConsensus(qnew, tc, weights, comm_world_obj, graph_obj, node_names,
+                                   trans_tag, corr_spacing, timeout)
         if LA.norm(qnew) != 0:
-        	qnew /= LA.norm(qnew) #normalize
+            qnew /= LA.norm(qnew)  # normalize
 
-    return qnew.reshape(datadim) #returns eigenvector in 1d
-    
+    return qnew.reshape(datadim)  # returns eigenvector in 1d
