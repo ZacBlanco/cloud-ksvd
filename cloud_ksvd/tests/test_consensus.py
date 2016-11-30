@@ -26,15 +26,15 @@ def bad_resp():
 class ConsensusTest(unittest.TestCase):
 
     @patch('consensus.transmit', return_value=MagicMock())
-    @patch('consensus.receive', return_value={ 'local': pickle.dumps(np.zeros((2, 2))) })
+    @patch('consensus.receive', return_value={ 'local': pickle.dumps(np.zeros((2, 2))), 'local2': pickle.dumps(np.ones((2, 2))) })
     def test_consensus_test(self, mock2, mock1):
         a = np.zeros((2, 2))
-        a[0][0] = 10
-        a[0][1] = 10
-        a[1][0] = 10
-        a[1][1] = 10
+        a[0][0] = 14
+        a[0][1] = 17
+        a[1][0] = 8
+        a[1][1] = 35
         comm = Communicator('udp', 12309)
-        r = consensus.run(a, 50, 12, {'local': 0.5}, comm)
+        r = consensus.run(a, 50, 12, {'local': 1/3, 'local2':1/3 }, comm)
         print(r)
         comm.close()
 
