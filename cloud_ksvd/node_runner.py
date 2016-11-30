@@ -2,6 +2,7 @@ import time
 import sys
 import json
 import requests
+import consensus
 from urllib.parse import urlparse
 from configparser import ConfigParser
 from multiprocessing import Process, Value
@@ -70,7 +71,17 @@ def kickoff(task):
         req_url = 'http://{}:{}/start/consensus'.format(node, port)
         requests.get(req_url)
     ########### Run Consensus Here ############
-    time.sleep(7)
+    # Load parameters:
+        # Load original data
+        # get neighbors and weights get_weights()
+        # Pick a tag ID (doesn't matter) --> 1
+        # communicator already created
+    weights = get_weights()
+    with open(filename) as f:
+        data = f.read()
+
+    consensus_data = consensus.run(data, 150, 1, weights, c)
+    # Log consensus data here
     ###########################################
     c.close()
     # print("Finished Processing")
