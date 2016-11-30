@@ -1,0 +1,23 @@
+import socket
+import fcntl
+import struct
+import sys
+import Communicator from cloud_comm
+
+def transmitData(z,transmissionTag,timeOut):
+	#Transmits data with time outs for messaging (only for data_size<=100)
+	rank = get_ip_address("wlan0")
+	data_size = np.shape(z)[0] #data_size refers to its dimension
+	data = [None]*size
+
+	return data
+
+#use NumPy bytes for translating z to bytes
+
+def receiveData(z,transmissionTag,timeOut):
+	rank = get_ip_address("wlan0")
+	listen(rank);
+
+
+
+	return data;

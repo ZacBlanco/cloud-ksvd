@@ -2,6 +2,7 @@ import time
 import sys
 import json
 import requests
+import numpy as np
 import consensus
 from urllib.parse import urlparse
 from configparser import ConfigParser
@@ -9,9 +10,80 @@ from multiprocessing import Process, Value
 from flask import Flask, request
 from cloud_comm import Communicator
 
+
 app = Flask(__name__)
 task_running = Value('i', 0, lock=True) # 0 == False, 1 == True
 conf_file = 'params.conf'
+
+
+def data_loader(filename):
+    '''Reads in data line by line from file. and stores in Numpy array
+
+    Each line of the file is a new vector with the format 1, 2, 3, ..., n where n is the length of the vector
+
+    Args:
+        str: name of data file 
+
+    Returns:
+        Numpy array: vectors read from each line of file 
+
+    '''
+
+    vectors = []
+    with open(filename, 'r') as f:  
+        for line in f:
+            v = list(map(lambda x: int(x), line.split(' ')))
+            vectors.append(v)
+        data = np.array(vectors)
+
+    return data
+
+def get_neighbors():
+    '''Gets IP addresses of neigbors for given node
+
+    Args: n/a
+
+    Returns:
+        list of IP addresses of neighbors
+    '''
+
+    global conf_file
+    con = ConfigParser()
+    con.read(conf_file)
+    v = json.loads(con['graph']['nodes'])
+    e = json.loads(con['graph']['edges'])
+
+    ip = consensus.get_ip_address('wlan0')
+
+    try:
+            i = v.index(ip)
+            print("index of ip array: {}".format(i))
+    except:
+            print('failed')
+            i = -1
+            pass
+     # Print upper triangular matrix
+     # for x in range(len(e)):
+     #     print( x*3*' ' +  str(e[x]))
+
+    n = []
+
+    for x in range(len(e)):
+        if x < i and i < len(a):
+            if e[x][i-x] == 1:
+                n.append(v[x])
+                print("indexes of n: {}".format(x))
+
+
+    if i < len(e):
+        for d in e[i]:
+            if (d ==1):
+                n.append(v[d])
+                print("indexes of n: {}".format(d))
+
+    return n 
+
+
 
 @app.route("/start/consensus")
 def run():
@@ -122,6 +194,9 @@ def get_degree():
         for d in e[i]:
             cnt += d
 
+    cnt -= 1
+    #minus one to exlude no self-loops from count
+
     return str(cnt)
 
 
@@ -140,3 +215,5 @@ if __name__ == "__main__":
 
     nr = config['node_runner']
     app.run(nr['host'], nr['port'])
+
+
