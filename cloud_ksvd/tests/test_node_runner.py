@@ -24,19 +24,19 @@ class test_node_runner(unittest.TestCase):
 
     def test_get_degree(self):
         d1 = self.app.get('/degree?host=192.168.2.180')
-        self.assertEqual(int(d1.get_data()), 2, "Degree of 2.180 should be 2")
+        self.assertEqual(int(d1.get_data()), 1, "Degree of 2.180 should be 1")
         
         d1 = self.app.get('/degree?host=192.168.2.181')
-        self.assertEqual(int(d1.get_data()), 4, "Degree of 2.181 should be 4")
+        self.assertEqual(int(d1.get_data()), 3, "Degree of 2.181 should be 3")
 
         d1 = self.app.get('/degree?host=192.168.2.182')
-        self.assertEqual(int(d1.get_data()), 4, "Degree of 2.182 should be 4")
+        self.assertEqual(int(d1.get_data()), 3, "Degree of 2.182 should be 3")
         
         d1 = self.app.get('/degree?host=192.168.2.183')
-        self.assertEqual(int(d1.get_data()), 5, "Degree of 2.183 should be 5")
+        self.assertEqual(int(d1.get_data()), 4, "Degree of 2.183 should be 4")
 
         d1 = self.app.get('/degree?host=192.168.2.184')
-        self.assertEqual(int(d1.get_data()), 4, "Degree of 2.184 should be 4")
+        self.assertEqual(int(d1.get_data()), 3, "Degree of 2.184 should be 3")
 
     @mock.patch('multiprocessing.Process.start')
     def test_consensus_start(self, mock1):
@@ -62,7 +62,17 @@ class test_node_runner(unittest.TestCase):
         mock1.assert_any_call('http://192.168.2.184:9090/start/consensus')
         self.assertEqual(mock2.called, True, "at this point time.sleep() should have been called.")
 
+    def test_load_data(self):
+        data = n.data_loader('vectors.txt')
 
+        for i in range(3):
+            for j in range(5):
+                self.assertEqual(data[i][j], i+1, "Should be equal to i+1")
+
+    @mock.patch('consensus.get_ip_address', return_value='192.168.2.180')
+    def test_get_neighbors(self, mock1):
+        neighbors = n.get_neighbors()
+        print(neighbors)
 
 
 
