@@ -34,8 +34,8 @@ class ConsensusTest(unittest.TestCase):
         a[1][0] = 8
         a[1][1] = 35
         comm = Communicator('udp', 12309)
-        r = consensus.run(a, 50, 12, {'local': 1/3, 'local2':1/3 }, comm)
-        print(r)
+        r = consensus.run(a, 50, 12, {'local': 1/3, 'local2': 1/3 }, comm)
+        print("Final Results: {}".format(r))
         comm.close()
 
 

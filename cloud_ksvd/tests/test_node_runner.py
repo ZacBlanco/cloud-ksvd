@@ -7,20 +7,20 @@ from unittest.mock import MagicMock, patch
 sys.path.append('..')
 import node_runner as n
 
-n.conf_file = 'params_test.conf'
+n.CONF_FILE = 'params_test.conf'
 
 class test_node_runner(unittest.TestCase):
     
     def setUp(self):
-        self.db_fd, n.app.config['DATABASE'] = tempfile.mkstemp()
-        n.app.config['TESTING'] = True
-        self.app = n.app.test_client()
-        # with n.app.app_context():
+        self.db_fd, n.APP.config['DATABASE'] = tempfile.mkstemp()
+        n.APP.config['TESTING'] = True
+        self.app = n.APP.test_client()
+        # with n.APP.app_context():
         #     n.init_db()
 
     def tearDown(self):
         os.close(self.db_fd)
-        os.unlink(n.app.config['DATABASE'])
+        os.unlink(n.APP.config['DATABASE'])
 
     def test_get_degree(self):
         d1 = self.app.get('/degree?host=192.168.2.180')
@@ -44,15 +44,15 @@ class test_node_runner(unittest.TestCase):
         self.assertEqual(mock1.called, True, "process start() should have been called.")
 
         mock1.reset_mock()
-        n.task_running.value = 1
+        n.TASK_RUNNING.value = 1
         r1 = self.app.get('/start/consensus')
         self.assertEqual(mock1.called, False, "process start() should *not* have been called.")
-        n.task_running.value = 0
+        n.TASK_RUNNING.value = 0
 
     @mock.patch('requests.get')
     @mock.patch('time.sleep')
     def test_kickoff(self, mock2, mock1):
-        task = n.task_running
+        task = n.TASK_RUNNING
         n.kickoff(task)
         self.assertEqual(mock1.call_count, 5)
         mock1.assert_any_call('http://192.168.2.180:9090/start/consensus')
@@ -60,8 +60,8 @@ class test_node_runner(unittest.TestCase):
         mock1.assert_any_call('http://192.168.2.182:9090/start/consensus')
         mock1.assert_any_call('http://192.168.2.183:9090/start/consensus')
         mock1.assert_any_call('http://192.168.2.184:9090/start/consensus')
-        self.assertEqual(mock2.called, True, "at this point time.sleep() should have been called.")
 
+        
     def test_load_data(self):
         data = n.data_loader('vectors.txt')
 
@@ -72,7 +72,7 @@ class test_node_runner(unittest.TestCase):
     @mock.patch('consensus.get_ip_address', return_value='192.168.2.180')
     def test_get_neighbors(self, mock1):
         neighbors = n.get_neighbors()
-        print(neighbors)
+        print("Neighbors: {}".format(neighbors))
 
 
 
