@@ -70,7 +70,6 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
 
     '''
     dim = orig_data.shape[0]  # rows
-    print(dim)
     old_data = new_data = orig_data
     size = len(neighbors)
     phi = np.matrix(np.zeros((dim, size)))  # number of communicators
@@ -97,9 +96,9 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
                     tempsum += neighbors[j] * diff  # 'mass' added to itself
                     # print('Neighbors[j] = {}'.format(neighbors[j]))
                     # print("Diff {}".format(diff))
-                    ind = neigh_list.index(j)
-                    print(diff)
-                    print(neighbors[j])
+                    # ind = neigh_list.index(j)
+                    # print(diff)
+                    # print(neighbors[j])
                     # phi[:,ind] += np.reshape(neighbors[j] * diff, (dim, 1))
 
             new_data = old_data + tempsum  # essentially doing consensus the long way
