@@ -56,31 +56,14 @@ def get_neighbors():
     con.read(CONF_FILE)
     v = json.loads(con['graph']['nodes'])
     e = json.loads(con['graph']['edges'])
-
+    print('nodes {}'.format(v))
     ip = consensus.get_ip_address('wlan0')
-
-    try:
-        i = v.index(ip)
-        print("Index of my node {}".format(i))
-    except:
-        i = -1
-     # Print upper triangular matrix
-     # for x in range(len(e)):
-     #     print( x*3*' ' +  str(e[x]))
-
+    i = v.index(ip)
     n = []
-
-    for x in range(len(e)):
-        if x < i and i < len(a):
-            if e[x][i - x] == 1:
-                n.append(v[x + i])
-                print("1 at Index: {}".format(x))
-
-    if i < len(e):
-        for d in e[i]:
-            if d == 1:
-                n.append(v[d+i])
-                # print("indexes of n: {}".format(d))
+    for x in range(len(v)):
+        print('x: {}, i {}'.format(x, i))
+        if e[i][x] == 1:
+            n.append(v[x])
 
     return n
 
@@ -183,7 +166,7 @@ def get_degree():
     cnt = 0
     for j in e[host_index]:
         cnt += j
-    
+
     cnt -= 1
     # minus one to exlude no self-loops from count
     return str(cnt)
