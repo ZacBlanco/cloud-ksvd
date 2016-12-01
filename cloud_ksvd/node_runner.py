@@ -56,31 +56,12 @@ def get_neighbors():
     con.read(CONF_FILE)
     v = json.loads(con['graph']['nodes'])
     e = json.loads(con['graph']['edges'])
-    print('nodes {}'.format(v))
     ip = consensus.get_ip_address('wlan0')
-
-    try:
-        i = v.index(ip)
-        print("Index of my node {}".format(i))
-    except:
-        i = -1
-     # Print upper triangular matrix
-     # for x in range(len(e)):
-     #     print( x*3*' ' +  str(e[x]))
-
+    i = v.index(ip)
     n = []
-
-    for x in range(len(e)):
-        if x < i and i < len(a):
-            if e[x][i - x] == 1:
-                n.append(v[x + i])
-                print("1 at Index: {}".format(x))
-
-    if i < len(e):
-        for d in e[i]:
-            if d == 1:
-                n.append(v[d+i])
-                # print("indexes of n: {}".format(d))
+    for x in range(len(v)):
+        if e[i][x] == 1 and x != i:
+            n.append(v[x])
     return n
 
 
@@ -134,7 +115,6 @@ def kickoff(task):
     # This the where we would need to do some node discovery, or use a pre-built graph
     # in order to notify all nodes they should begin running
     global CONF_FILE
-    # print("Processing for 5 seconds......")
     config = ConfigParser()
 
     config.read(CONF_FILE)
@@ -159,7 +139,6 @@ def kickoff(task):
     # Log consensus data here
     ###########################################
     c.close()
-    # print("Finished Processing")
     with task.get_lock():
         task.value = 0
 
@@ -173,34 +152,18 @@ def get_degree():
     global CONF_FILE
     c = ConfigParser()
     c.read(CONF_FILE)
-    o = urlparse(request.url)
-    o = o.hostname
-    o = request.args.get('host')
+    # req_url = urlparse(request.url)
+    # host = o.hostname
+    host = request.args.get('host')
     a = json.loads(c['graph']['nodes'])
     e = json.loads(c['graph']['edges'])
-    try:
-        i = a.index(o)
-    except:
-        i = -1
-        pass
+    host_index = a.index(host)
     cnt = 0
-    # Print upper triangular matrix
-    # for x in range(len(e)):
-    #     print( x*3*' ' +  str(e[x]))
-
-    for x in range(len(e)):
-        if x < i and i < len(a):
-            cnt += e[x][i - x]
-            # print("added to count")
-            # print("Added e[x][i-x] = {}".format(e[x][i-x]))
-
-    if i < len(e):
-        for d in e[i]:
-            cnt += d
+    for j in e[host_index]:
+        cnt += j
 
     cnt -= 1
     # minus one to exlude no self-loops from count
-
     return str(cnt)
 
 
