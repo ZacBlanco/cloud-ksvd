@@ -174,34 +174,18 @@ def get_degree():
     global CONF_FILE
     c = ConfigParser()
     c.read(CONF_FILE)
-    o = urlparse(request.url)
-    o = o.hostname
-    o = request.args.get('host')
+    # req_url = urlparse(request.url)
+    # host = o.hostname
+    host = request.args.get('host')
     a = json.loads(c['graph']['nodes'])
     e = json.loads(c['graph']['edges'])
-    try:
-        i = a.index(o)
-    except:
-        i = -1
-        pass
+    host_index = a.index(host)
     cnt = 0
-    # Print upper triangular matrix
-    # for x in range(len(e)):
-    #     print( x*3*' ' +  str(e[x]))
-
-    for x in range(len(e)):
-        if x < i and i < len(a):
-            cnt += e[x][i - x]
-            # print("added to count")
-            # print("Added e[x][i-x] = {}".format(e[x][i-x]))
-
-    if i < len(e):
-        for d in e[i]:
-            cnt += d
-
+    for j in e[host_index]:
+        cnt += j
+    
     cnt -= 1
     # minus one to exlude no self-loops from count
-
     return str(cnt)
 
 

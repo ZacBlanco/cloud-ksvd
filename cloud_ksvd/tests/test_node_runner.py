@@ -72,7 +72,7 @@ class test_node_runner(unittest.TestCase):
     @mock.patch('consensus.get_ip_address', return_value='192.168.2.180')
     def test_get_neighbors(self, mock1):
         neighbors = n.get_neighbors()
-        print("Neighbors: {}".format(neighbors))
+        # print("Neighbors: {}".format(neighbors))
 
 
 
