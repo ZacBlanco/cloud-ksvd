@@ -16,9 +16,13 @@ import struct
 import fcntl
 import requests
 import configparser
+import logging
 import numpy as np
 from numpy import linalg as LA
 # Consensus Functions
+
+
+logging.basicConfig(filename='consensus.log', level=logging.DEBUG)
 
 
 def get_weights(neighbors, config="params.conf"):
@@ -31,6 +35,7 @@ def get_weights(neighbors, config="params.conf"):
             dict: a dictionary mapping neighbors to Metropolis-Hastings Weights
 
     '''
+    logging.debug('Started get_weights function')
     weights = {}
     degs = {}
     conf = configparser.ConfigParser()
@@ -48,10 +53,12 @@ def get_weights(neighbors, config="params.conf"):
 
     
     weights['self'] = 1 - sum(weights.values())
+    logging.debug('returned weights: {}'.format(weights))
     return weights
 
 
 def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
+
     '''Run run corrective consensus v.s. a list of nodes in order to converge on an agreed-upon
          average.
 
@@ -69,6 +76,8 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
 
 
     '''
+    logging.debug('Started run in consensus')
+
     dim = orig_data.shape[0]  # rows
     old_data = new_data = orig_data
     size = len(neighbors)
@@ -77,6 +86,8 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
     neigh_list = list(neighbors.keys())
 
     for i in range(tc):
+        logging.debug('running consesnus iteration: {}'.format(i))
+
         if i != corr_count * (corr_spacing + 1) - 1:
             # set q(t) = q(t-1), remember qnew is from last iteration
             old_data = new_data
@@ -100,8 +111,10 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
                     # print(diff)
                     # print(neighbors[j])
                     # phi[:,ind] += np.reshape(neighbors[j] * diff, (dim, 1))
+            logging.debug('old_data: {}'.format(old_data))
 
             new_data = old_data + tempsum  # essentially doing consensus the long way
+            logging.debug('new_data after iteration: {}'.format(old_data))
 
             # Corrective Iteration
         else:
@@ -128,6 +141,8 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
                 new_data += -(0.5) * np.reshape(np.sum(delta, 1), (dim, 1))
 
             corr_count += 1
+
+        logging.debug('new_data before returning from run consensus: {}'.format(new_data))   
 
         return new_data
 
@@ -187,6 +202,9 @@ def transmit(data, tag, neighbors, communicator):
             N/A
     '''
     for n in neighbors:
+
+        logging.debug('Transmitting data to neighbor: {}'.format(n))
+
         communicator.send(n, data, tag)
 
 
@@ -306,6 +324,7 @@ def get_ip_address(ifname):
         s.fileno(),
         0x8915,  # SIOCGIFADDR
         struct.pack('256s', ifname.encode('utf-8')))[20:24])
+    logging.debug('getting ip address: {}'.format(ip))
     return ip
 
 
