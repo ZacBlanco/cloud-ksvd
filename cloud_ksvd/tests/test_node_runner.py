@@ -6,6 +6,7 @@ from unittest import mock
 from unittest.mock import MagicMock, patch
 sys.path.append('..')
 import node_runner as n
+import consensus
 
 n.CONF_FILE = 'params_test.conf'
 
@@ -49,11 +50,15 @@ class test_node_runner(unittest.TestCase):
         self.assertEqual(mock1.called, False, "process start() should *not* have been called.")
         n.TASK_RUNNING.value = 0
 
+    @mock.patch('node_runner.data_loader', return_value=MagicMock())
+    @mock.patch('consensus.get_ip_address', return_value='192.168.2.180')
+    @mock.patch('consensus.get_weights', return_value={'192.168.2.183': 0.5})
     @mock.patch('requests.get')
     @mock.patch('time.sleep')
-    def test_kickoff(self, mock2, mock1):
+    def test_kickoff(self, mock2, mock1, mock3, mock4, mock5):
+        consensus.run = MagicMock()
         task = n.TASK_RUNNING
-        n.kickoff(task)
+        n.kickoff(task, 20)
         self.assertEqual(mock1.call_count, 5)
         mock1.assert_any_call('http://192.168.2.180:9090/start/consensus')
         mock1.assert_any_call('http://192.168.2.181:9090/start/consensus')

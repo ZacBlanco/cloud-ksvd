@@ -84,7 +84,12 @@ def run():
     msg = ""
     global TASK_RUNNING
     if TASK_RUNNING.value != 1:
-        p = Process(target=kickoff, args=(TASK_RUNNING,))
+        iterations = 50
+        try:
+            iterations = int(request.args.get('tc'))
+        except:
+            iterations = 50
+        p = Process(target=kickoff, args=(TASK_RUNNING,iterations,))
         p.daemon = True
         p.start()
         msg = "Started Running Consensus"
@@ -104,7 +109,7 @@ def run2():
     return "We can't run Cloud K-SVD quite yet. Please check back later."
 
 
-def kickoff(task):
+def kickoff(task, tc):
     '''The worker method for running distributed consensus.
 
         Args:
@@ -129,14 +134,14 @@ def kickoff(task):
         requests.get(req_url)
     ########### Run Consensus Here ############
     # Load parameters:
-        # Load original data
-        # get neighbors and weights get_weights()
-        # Pick a tag ID (doesn't matter) --> 1
-        # communicator already created
-    # weights = consensus.get_weights()
-    # with open(filename) as f:
-        # data = f.read()
-    # consensus_data = consensus.run(data, 150, 1, weights, c)
+    # Load original data
+    # get neighbors and weights get_weights()
+    # Pick a tag ID (doesn't matter) --> 1
+    # communicator already created
+    neighs = get_neighbors()
+    weights = consensus.get_weights(neighs)
+    data = data_loader(config['data']['file'])
+    consensus_data = consensus.run(data, tc, 1, weights, c)
     # Log consensus data here
     ###########################################
     c.close()
@@ -168,8 +173,7 @@ def get_degree():
     return str(cnt)
 
 
-if __name__ == "__main__":
-
+def start():
     # Use a different config other than the default if user specifies
     global config_file
     config = ConfigParser()
@@ -181,3 +185,6 @@ if __name__ == "__main__":
 
     nr = config['node_runner']
     APP.run(nr['host'], nr['port'])
+
+if __name__ == "__main__":
+    start()
