@@ -21,12 +21,11 @@ from numpy import linalg as LA
 # Consensus Functions
 
 
-def get_weights(neighbors, degree, config="params.conf"):
+def get_weights(neighbors, config="params.conf"):
     '''Calculate the Metropolis Hastings weights for the current node and its neighbors.
 
     Args:
             neighbors (iterable): An iterable of neighbor IP addresses to get degrees from
-            degree (int): degree of the current node.
 
     Returns:
             dict: a dictionary mapping neighbors to Metropolis-Hastings Weights
@@ -37,13 +36,15 @@ def get_weights(neighbors, degree, config="params.conf"):
     conf = configparser.ConfigParser()
     conf.read(config)
     port = conf['node_runner']['port']
+    my_deg = len(neighbors)
     for neigh in neighbors:
         res = requests.get('http://{}:{}/degree'.format(neigh, port))
         if res.status_code == 200:
             degs[neigh] = int(res.text)
-            weights[neigh] = 1 / (max(degs[neigh], degree) + 1)
+            weights[neigh] = 1 / (max(degs[neigh], my_deg) + 1)
         else:
             weights[neigh] = 0
+            raise RuntimeError("One of the nodes could not be contacted")
 
     
     weights['self'] = 1 - sum(weights.values())
@@ -69,7 +70,6 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
 
     '''
     dim = orig_data.shape[0]  # rows
-    print(dim)
     old_data = new_data = orig_data
     size = len(neighbors)
     phi = np.matrix(np.zeros((dim, size)))  # number of communicators
@@ -96,10 +96,10 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
                     tempsum += neighbors[j] * diff  # 'mass' added to itself
                     # print('Neighbors[j] = {}'.format(neighbors[j]))
                     # print("Diff {}".format(diff))
-                    ind = neigh_list.index(j)
-                    print(diff)
-                    print(neighbors[j])
-                    # phi[:,ind] += np.reshape(neighbors[j] * diff, (-1, 1))
+                    # ind = neigh_list.index(j)
+                    # print(diff)
+                    # print(neighbors[j])
+                    # phi[:,ind] += np.reshape(neighbors[j] * diff, (dim, 1))
 
             new_data = old_data + tempsum  # essentially doing consensus the long way
 
