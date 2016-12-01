@@ -52,34 +52,19 @@ def get_neighbors():
     con.read(conf_file)
     v = json.loads(con['graph']['nodes'])
     e = json.loads(con['graph']['edges'])
-
+    print('nodes {}'.format(v))
     ip = consensus.get_ip_address('wlan0')
-
-    try:
-            i = v.index(ip)
-            print("index of ip array: {}".format(i))
-    except:
-            print('failed')
-            i = -1
-            pass
+    i = v.index(ip)
+    print('i: {}'.format(i))
      # Print upper triangular matrix
      # for x in range(len(e)):
      #     print( x*3*' ' +  str(e[x]))
 
     n = []
-
-    for x in range(len(e)):
-        if x < i and i < len(a):
-            if e[x][i-x] == 1:
-                n.append(v[x])
-                print("indexes of n: {}".format(x))
-
-
-    if i < len(e):
-        for d in e[i]:
-            if (d ==1):
-                n.append(v[d])
-                print("indexes of n: {}".format(d))
+    for x in range(len(v)):
+        print('x: {}, i {}'.format(x, i))
+        if e[i][x] == 1:
+            n.append(v[x])
 
     return n 
 

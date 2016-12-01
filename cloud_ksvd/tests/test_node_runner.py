@@ -69,8 +69,20 @@ class test_node_runner(unittest.TestCase):
             for j in range(5):
                 self.assertEqual(data[i][j], i+1, "Should be equal to i+1")
 
-    @mock.patch('consensus.get_ip_address', return_value='192.168.2.180')
+    @mock.patch('consensus.get_ip_address', side_effect=['192.168.2.180','192.168.2.181', "192.168.2.182", "192.168.2.183", "192.168.2.184"])
     def test_get_neighbors(self, mock1):
+        neighbors = n.get_neighbors()
+        print(neighbors)
+
+        neighbors = n.get_neighbors()
+        print(neighbors)
+
+        neighbors = n.get_neighbors()
+        print(neighbors)
+
+        neighbors = n.get_neighbors()
+        print(neighbors)
+
         neighbors = n.get_neighbors()
         print(neighbors)
 
