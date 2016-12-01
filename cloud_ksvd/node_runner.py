@@ -56,13 +56,11 @@ def get_neighbors():
     con.read(CONF_FILE)
     v = json.loads(con['graph']['nodes'])
     e = json.loads(con['graph']['edges'])
-    print('nodes {}'.format(v))
     ip = consensus.get_ip_address('wlan0')
     i = v.index(ip)
     n = []
     for x in range(len(v)):
-        print('x: {}, i {}'.format(x, i))
-        if e[i][x] == 1:
+        if e[i][x] == 1 and x != i:
             n.append(v[x])
 
     return n
@@ -118,7 +116,6 @@ def kickoff(task):
     # This the where we would need to do some node discovery, or use a pre-built graph
     # in order to notify all nodes they should begin running
     global CONF_FILE
-    # print("Processing for 5 seconds......")
     config = ConfigParser()
 
     config.read(CONF_FILE)
@@ -143,7 +140,6 @@ def kickoff(task):
     # Log consensus data here
     ###########################################
     c.close()
-    # print("Finished Processing")
     with task.get_lock():
         task.value = 0
 

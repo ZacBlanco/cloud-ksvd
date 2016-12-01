@@ -72,7 +72,7 @@ class test_node_runner(unittest.TestCase):
     @mock.patch('consensus.get_ip_address', side_effect=['192.168.2.180','192.168.2.181', "192.168.2.182", "192.168.2.183", "192.168.2.184"])
     def test_get_neighbors(self, mock1):
         neighbors = n.get_neighbors()
-        self.assertEqual(len(neighbors), 1, "Neighbors should be 3 on 2.180")
+        self.assertEqual(len(neighbors), 1, "Neighbors should be 2 on 2.180")
 
         neighbors = n.get_neighbors()
         self.assertEqual(len(neighbors), 3, "Neighbors should be 3 on 2.181")
@@ -81,7 +81,7 @@ class test_node_runner(unittest.TestCase):
         self.assertEqual(len(neighbors), 3, "Neighbors should be 3 on 2.182")
 
         neighbors = n.get_neighbors()
-        self.assertEqual(len(neighbors), 4, "Neighbors should be 3 on 2.183")
+        self.assertEqual(len(neighbors), 4, "Neighbors should be 4 on 2.183")
 
         neighbors = n.get_neighbors()
         self.assertEqual(len(neighbors), 3, "Neighbors should be 3 on 2.184")
