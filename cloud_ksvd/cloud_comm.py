@@ -4,6 +4,11 @@ import time
 import json
 import math
 import struct
+import logging
+import consensus
+from threading import Lock
+
+logging.basicConfig(filename='cloud_comm.log')
 
 TAG_SIZE = 4
 SEQ_SIZE = 2
@@ -217,7 +222,7 @@ class Communicator:
 
         if self.listen_thread == None:  # Create thread if not already created
             self.listen_thread = threading.Thread(
-                target=self.__run_listen__, args=(self.listen_sock, '', self.listen_port))
+                target=self.__run_listen__, args=(self.listen_sock, '0.0.0.0', self.listen_port))
             self.is_listening = True
             self.listen_thread.start()
 
@@ -238,7 +243,10 @@ class Communicator:
 
         while self.is_listening:
             try:
+                
+                
                 data, addr = _sock.recvfrom(1024)  # Receive at max 1024 bytes
+                logging.debug('Received data from address {}'.format(addr))
                 self.receive(data, addr[0])
             except BlockingIOError:
                 pass
@@ -251,7 +259,7 @@ class Communicator:
         Args:
             seq_num(int): The packet's sequence number
             seq_total(int): The total number of sequence packets to be sent
-            tag (str/ ytes): A string or bytes object to encode as the data tag
+            tag (bytes): A string or bytes object to encode as the data tag
 
         Returns:
             bytearray: A bytearray with the metadata
@@ -261,7 +269,7 @@ class Communicator:
         packet = bytearray()
         packet += struct.pack('H', seq_total)
         packet += struct.pack('H', seq_num)
-        packet += str(tag).encode('utf-8')[0:4]
+        packet += tag[0:4]
         return packet
 
     def create_packets(self, data, tag):
@@ -285,7 +293,7 @@ class Communicator:
 
         Args:
             data (bytes): The data as a string which is meant to be sent to its destination
-            tag (str): A tag. Only the first 4 bytes (chars) are added as the tag.
+            tag (bytes): A tag. Only the first 4 bytes are added as the tag.
 
         Returns
             list: A list containing the payload for the packets which should be sent to the destination.
@@ -342,9 +350,18 @@ class Communicator:
 
         ret = True
         packets = self.create_packets(data, tag)
+        logging.debug("Sending {} packet(s) to {}".format(len(packets), ip))
         for packet in packets:
-            if (self.send_sock.sendto(packet, (ip, self.send_port)) < 0):
+            # logging.debug('Sending packet to IP: {} on port {}'.format(ip, self.send_port))
+            try:
+                if (self.send_sock.sendto(packet, (ip, self.send_port)) < 0):
+                    logging.debug("Some packets were not sent successfully")
+                    ret = False
+
+            except OSError as e:
                 ret = False
+                logging.warn(str(e))
+                break
         return ret
 
     def get(self, ip, tag):
@@ -373,14 +390,17 @@ class Communicator:
 
         '''
         data = None
+        tg = tag.decode('utf-8')
         if ip not in self.data_store:
             data = None
-        elif tag not in self.data_store[ip]:
+        elif tg not in self.data_store[ip]:
             data = None
         else:
-            data = self.data_store[ip][tag]
-            self.data_store[ip][tag] = None
-
+            data = self.data_store[ip][tg]
+            lock = threading.Lock()
+            lock.acquire()
+            self.data_store[ip][tg] = None
+            lock.release() 
         return data
 
     def stop_listen(self):
@@ -434,6 +454,7 @@ class Communicator:
         Returns:
             N/A
         '''
+
         if addr not in self.tmp_data:
             self.tmp_data[addr] = {}
 
@@ -467,6 +488,10 @@ class Communicator:
                 reassembled += self.tmp_data[addr][data_tag]['packets'][i]
             if addr not in self.data_store:
                 self.data_store[addr] = {}
+            logging.debug("Adding reassmbled packet to data store with IP {} and tag {}".format(addr, data_tag))
+            lock = threading.Lock()
+            lock.acquire()
             self.data_store[addr][data_tag] = reassembled
+            lock.release()
             self.tmp_data[addr][data_tag]['packets'] = {}
             self.tmp_data[addr][data_tag]['seq_total'] = {}

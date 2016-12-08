@@ -105,7 +105,7 @@ class TestCommunicator(unittest.TestCase):
             l.append(i)
         c1 = Communicator('UDP', 9090)
         l = str(l).encode('utf-8')
-        p1 = c1.create_packets(l, '9012')
+        p1 = c1.create_packets(l, '9012'.encode('utf-8'))
         self.assertEqual(len(p1), 1)
         p1 = p1[0]
         c1.close()
@@ -116,7 +116,7 @@ class TestCommunicator(unittest.TestCase):
         for i in range(1000):
             d.append(random.random())
         d = str(d).encode('utf-8')
-        packs = c1.create_packets(d, 'tag1')
+        packs = c1.create_packets(d, 'tag1'.encode('utf-8'))
         r = bytes() # total data bytes
         t = bytes()
         for packet in packs:
@@ -141,9 +141,9 @@ class TestCommunicator(unittest.TestCase):
         for i in range(122): # Exactly 500 bytes
             d.append(i)
         d = str(d).encode('utf-8')
-        d = c1.create_packets(d, '1111')
+        d = c1.create_packets(d, '1111'.encode('utf-8'))
         self.assertEqual(len(d), 1, 'Should have only created a single packet')
-        self.assertEqual('1111', d[0][4:8].decode('utf-8'))
+        self.assertEqual('1111'.encode('utf-8'), d[0][4:8])
         self.assertEqual(0, struct.unpack('H', d[0][0:2])[0])
         self.assertEqual(0, struct.unpack('H', d[0][2:4])[0])
         c1.close()
@@ -161,19 +161,19 @@ class TestCommunicator(unittest.TestCase):
     @patch('socket.socket.sendto', side_effect=[1, -1, 5, -1])
     def test_mocked_send(self, mock1):
         c1 = Communicator('udp', 10001)
-        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), True)
-        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), False)
-        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), True)
-        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'), False)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'.encode('utf-8')), True)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'.encode('utf-8')), False)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'.encode('utf-8')), True)
+        self.assertEqual(c1.send('192.168.1.1', 'ayyy'.encode('utf-8'), 'noice'.encode('utf-8')), False)
         c1.close()
 
     @patch('socket.socket.sendto', return_value=5)
     def test_big_mock_send(self, mock1):
         l = str(list(range(1000))).encode('utf-8')
         c1 = Communicator('udp', 10001)
-        self.assertEqual(c1.send('abc1213', l, 'big_'), True)
+        self.assertEqual(c1.send('abc1213', l, 'big_'.encode('utf-8')), True)
         mock1.return_value=-1
-        self.assertEqual(c1.send('abc1213', l, 'big_'), False)
+        self.assertEqual(c1.send('abc1213', l, 'big_'.encode('utf-8')), False)
         c1.close()
     
 
@@ -181,9 +181,9 @@ class TestCommunicator(unittest.TestCase):
         # Encodes and decodes a single packet.
         c1 = Communicator('udp', 10001)
         l = str(list(range(100))).encode('utf-8')
-        for packet in c1.create_packets(l, '_get'):
+        for packet in c1.create_packets(l, '_get'.encode('utf-8')):
             c1.receive(packet, 'test')
-        r = c1.get('test', '_get')
+        r = c1.get('test', '_get'.encode('utf-8'))
         self.assertNotEqual(r, None)
         self.assertEqual(l, r, 'Reassembled bytes should be the same.')
         c1.close()
@@ -192,7 +192,7 @@ class TestCommunicator(unittest.TestCase):
         # This test helped to fix a bug where we were accidentally appending an extra blank packet when creating packets
         c1 = Communicator('udp', 10001)
         l = str(list(range(550))).encode('utf-8')
-        packets = c1.create_packets(l, '_get')
+        packets = c1.create_packets(l, '_get'.encode('utf-8'))
         self.assertEqual(len(packets), 6)
 
         c1.close()
@@ -202,10 +202,10 @@ class TestCommunicator(unittest.TestCase):
         c1 = Communicator('udp', 10001)
         l = str(list(range(1000))).encode('utf-8')
         # print(l)
-        packets = c1.create_packets(l, '_get')
+        packets = c1.create_packets(l, '_get'.encode('utf-8'))
         for packet in packets:
             c1.receive(packet, 'test')
-        r = c1.get('test', '_get')
+        r = c1.get('test', '_get'.encode('utf-8'))
         self.assertNotEqual(r, None)
         self.assertEqual(l, r, 'Reassembled bytes should be the same.')
         c1.close()
@@ -223,7 +223,7 @@ class TestCommunicator(unittest.TestCase):
         self.assertNotEqual(c1.listen_thread, None)
         self.assertEqual(c1.is_listening, True)
         c1.receive = MagicMock()
-        c1.send('127.0.0.1', l, 'test')
+        c1.send('127.0.0.1', l, 'test'.encode('utf-8'))
         
         # Give some time for the other thread to run before checking conditions
         ctr = 0
@@ -240,10 +240,10 @@ class TestCommunicator(unittest.TestCase):
         c1 = Communicator('udp', 9071)
         for i in range(10):
             msg = 'Iteration: {}'.format(i).encode('utf-8')
-            packets = c1.create_packets(msg, 'test')
+            packets = c1.create_packets(msg, 'test'.encode('utf-8'))
             for packet in packets:
                 c1.receive(packet, 'local')
-            self.assertEqual(c1.get('local', 'test').decode('utf-8'), msg.decode('utf-8'))
+            self.assertEqual(c1.get('local', 'test'.encode('utf-8')).decode('utf-8'), msg.decode('utf-8'))
             
 
         c1.close()
@@ -252,12 +252,12 @@ class TestCommunicator(unittest.TestCase):
 
         c1 = Communicator('udp', 9071)
         s = bytes(str(range(1000)).encode('utf-8'))
-        pkts = c1.create_packets(s ,'tg11')
+        pkts = c1.create_packets(s ,'tg11'.encode('utf-8'))
         for pkt in pkts:
             c1.receive(pkt, 'local')
-        s2 = c1.get('local', 'tg11')
+        s2 = c1.get('local', 'tg11'.encode('utf-8'))
         self.assertEqual(s, s2, "Bytes should be able to be retrieved")
-        s2 = c1.get('local', 'tg11')
+        s2 = c1.get('local', 'tg11'.encode('utf-8'))
         self.assertNotEqual(s2, s, "Should not be able to retrieve the same data again")
         c1.close()
         

@@ -16,9 +16,13 @@ import struct
 import fcntl
 import requests
 import configparser
+import threading
 import numpy as np
+import logging
 from numpy import linalg as LA
 # Consensus Functions
+
+logging.basicConfig(filename='consensus.log')
 
 
 def get_weights(neighbors, config="params.conf"):
@@ -38,16 +42,21 @@ def get_weights(neighbors, config="params.conf"):
     port = conf['node_runner']['port']
     my_deg = len(neighbors)
     for neigh in neighbors:
-        res = requests.get('http://{}:{}/degree'.format(neigh, port))
-        if res.status_code == 200:
-            degs[neigh] = int(res.text)
-            weights[neigh] = 1 / (max(degs[neigh], my_deg) + 1)
-        else:
+        r_url = 'http://{}:{}/degree?host={}'.format(neigh, port, neigh)
+        logging.debug('Attempting to get degree of node {}'.format(neigh))
+        logging.debug('Degree request URL {}'.format(r_url))
+        try:
+            res = requests.get(r_url)
+            
+            if res.status_code == 200:
+                degs[neigh] = int(res.text)
+                weights[neigh] = 1 / (max(degs[neigh], my_deg) + 1)
+            else:
+                weights[neigh] = 0
+                raise RuntimeError("One of the nodes could not be contacted")
+        except:
             weights[neigh] = 0
-            raise RuntimeError("One of the nodes could not be contacted")
-
-    
-    weights['self'] = 1 - sum(weights.values())
+    # weights['self'] = 1 - sum(weights.values())
     return weights
 
 
@@ -69,67 +78,39 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
 
 
     '''
+    logging.debug("tc: {}, tag_id: {}, num neighbors: {}, ".format(tc, tag_id, len(neighbors)))
     dim = orig_data.shape[0]  # rows
-    old_data = new_data = orig_data
+    old_data = orig_data
+    new_data = orig_data
     size = len(neighbors)
-    phi = np.matrix(np.zeros((dim, size)))  # number of communicators
+    # phi = np.matrix(np.zeros((dim, size)))  # number of communicators
     corr_count = 1
     neigh_list = list(neighbors.keys())
-
+    logging.debug("Old data before: {}".format(old_data))
+    logging.debug("new data before: {}".format(new_data))
     for i in range(tc):
-        if i != corr_count * (corr_spacing + 1) - 1:
-            # set q(t) = q(t-1), remember qnew is from last iteration
-            old_data = new_data
+        logging.debug("Running {}th iteration".format(i))
+        logging.debug('Current data: {}'.format(old_data))
+        old_data = new_data
 
-            # transfer data
-            tag = build_tag(tag_id, i)
-            b_data = matrix_to_bytes(new_data)
-            transmit(b_data, tag, neighbors, communicator)
-            data = receive(tag, neighbors, communicator)
+        # transfer data
+        tag = build_tag(tag_id, i)
+        b_data = matrix_to_bytes(new_data)
+        transmit(b_data, tag, neighbors, communicator)
+        data = receive(tag, neighbors, communicator)
 
-            # Consensus
-            tempsum = 0  # used for tracking 'mass' transmitted
-            for j in neighbors:
-                if data[j] != None:  # if data was received, then...
-                    t = matrix_from_bytes(data[j])
-                    diff = t - old_data
-                    tempsum += neighbors[j] * diff  # 'mass' added to itself
-                    # print('Neighbors[j] = {}'.format(neighbors[j]))
-                    # print("Diff {}".format(diff))
-                    # ind = neigh_list.index(j)
-                    # print(diff)
-                    # print(neighbors[j])
-                    # phi[:,ind] += np.reshape(neighbors[j] * diff, (dim, 1))
+        # Consensus
+        tempsum = 0  # used for tracking 'mass' transmitted
+        for j in neighbors:
+            if data[j] != None and j != 'self':  # if data was received, then...
+                t = matrix_from_bytes(data[j])
+                diff = t - old_data
+                logging.debug("diff from neighbor {} is {} ".format(j, diff))
+                tempsum += neighbors[j] * diff  # 'mass' added to itself
+        
+        new_data = old_data + tempsum  # essentially doing consensus the long way
 
-            new_data = old_data + tempsum  # essentially doing consensus the long way
-
-            # Corrective Iteration
-        else:
-            pass
-            delta = np.matrix(np.zeros((dim, size)))
-            v = np.zeros(size)
-
-            # Mass distribution difference is transmitted
-            tag = build_tag(tag_id + 1, i)  # 1 for corrective iteration
-            p_data = matrix_to_bytes(phi[:, j])
-            transmit(p_data, tag, neighbors, communicator)
-            phi_data = receive(tag, neighbors, communicator)
-
-            # Mass distribution should be equivalent sent and received
-            for j in neighbors:
-                if phi_data[j] != None:
-                    phi_data[j] = matrix_from_bytes(phi_data[j])
-                    ind = neigh_list.index(j)
-                    delta[:, ind] = phi[:, ind] + phi_data[j]
-                    v[j] = 1
-                phi[:, ind] += (-0.5) * delta[:, ind] * v[j]
-                # ensures stability if packet loss during corrective
-                # transmission
-                new_data += -(0.5) * np.reshape(np.sum(delta, 1), (dim, 1))
-
-            corr_count += 1
-
-        return new_data
+    return new_data
 
 
 def matrix_to_bytes(data):
@@ -187,6 +168,7 @@ def transmit(data, tag, neighbors, communicator):
             N/A
     '''
     for n in neighbors:
+        # logging.debug('Consensus transmitting data to neighbor {} with tag {}'.format(n, tag))
         communicator.send(n, data, tag)
 
 
@@ -206,13 +188,13 @@ def receive(tag, neighbors, communicator):
     chk = []
     for n in neighbors:
         tmp = communicator.get(n, tag)
-        if tmp == None:
+        if tmp == None and n != 'self':
             missing += 1
             chk.append(n)
         else:
             d[n] = tmp
 
-    time.sleep(missing * .1) # Only attempt at synchronization we have so far
+    # time.sleep(0.1) # Only attempt at synchronization we have so far
     for n in chk:
         d[n] = communicator.get(n, tag)
 
@@ -229,61 +211,6 @@ def build_tag(tag_id, num):
     bts = max(3, bts)  # Should always give us at least 3 bytes to work with.
     tag += num.to_bytes(bts, byteorder='little')[0:3]
     return tag
-
-
-# def correctiveConsensus(z, tc, weights, comm_world_obj, graph_obj, node_names,
-#                         trans_tag, corr_spacing, timeout):
-#     '''Run a version of distributed consensus
-#     '''
-
-#     # Detailed in the paper- the proof presented in the paper is somewhat simple
-#     # Figure it out, because this code is definitely not simple
-#     datadim = z.shape[0]
-#     rank = comm_world_obj.Get_rank()
-#     size = comm_world_obj.Get_size()
-#     q, qnew = (z), (z)
-#     phi = np.matrix(np.zeros((datadim, size)))
-#     corr_count = 1
-
-#     for cons_iter in range(tc):
-
-#         # Regular Iteration
-#         if cons_iter != corr_count * (corr_spacing + 1) - 1:
-#             # set q(t) = q(t-1), remember qnew is from last iteration
-#             q = qnew
-#             # transfer data
-#             data = transmit_data(qnew, comm_world_obj, graph_obj, node_names,
-#                                  trans_tag, timeout)
-#             # Consensus
-#             tempsum = 0  # used for tracking 'mass' transmitted
-#             for j in graph_obj.Get_neighbors(rank):
-#                 if data[j] != None:  # if data was received, then...
-#                     difference = data[j] - q
-#                     # 'mass' added to itself
-#                     tempsum += weights[j] * (difference)
-#                     phi[:, j] += np.reshape((weights[j]
-#                                              * (difference)), (datadim, 1))
-#             # update local data
-#             qnew = q + tempsum  # essentially doing consensus the long way
-#             # Corrective Iteration
-#         else:
-#             Delta = np.matrix(np.zeros((datadim, size)))
-#             v = np.zeros(size)
-#             # Mass distribution difference is transmitted
-#             phidata = transmit_data(phi[:, j], comm_world_obj, graph_obj, node_names,
-#                                     trans_tag, timeout)
-#             # Mass distribution should be equivalent sent and received
-#             for j in graph_obj.Get_neighbors(rank):
-#                 if phidata[j] != None:  # if 'mass disr.' transmision was succesful
-#                     Delta[:, j] = phi[:, j] + phidata[j]
-#                     v[j] = 1
-#             # ensures stability if packet loss during corrective transmission
-#             phi[:, j] += (-0.5) * Delta[:, j] * v[j]
-#             qnew += -(0.5) * np.reshape(np.sum(Delta, 1), (datadim, 1))
-
-#             corr_count += 1
-
-#     return qnew  # q(t) after processing
 
 
 def get_ip_address(ifname):
