@@ -19,6 +19,7 @@ import configparser
 import threading
 import numpy as np
 import logging
+from collections import deque
 from numpy import linalg as LA
 # Consensus Functions
 
@@ -56,7 +57,6 @@ def get_weights(neighbors, config="params.conf"):
                 raise RuntimeError("One of the nodes could not be contacted")
         except:
             weights[neigh] = 0
-    # weights['self'] = 1 - sum(weights.values())
     return weights
 
 
@@ -88,9 +88,12 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
     neigh_list = list(neighbors.keys())
     logging.debug("Old data before: {}".format(old_data))
     logging.debug("new data before: {}".format(new_data))
+    missing_data = {}
+    for n in neigh_list:
+        missing_data[n] = deque()
+
     for i in range(tc):
-        logging.debug("Running {}th iteration".format(i))
-        logging.debug('Current data: {}'.format(old_data))
+        logging.info('Iter {}, Data: {}'.format(i, new_data))
         old_data = new_data
 
         # transfer data
@@ -102,13 +105,40 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
         # Consensus
         tempsum = 0  # used for tracking 'mass' transmitted
         for j in neighbors:
-            if data[j] != None and j != 'self':  # if data was received, then...
+
+            # Process any data which has arrived
+            if data[j] != None:  # if data was received, then...
                 t = matrix_from_bytes(data[j])
                 diff = t - old_data
                 logging.debug("diff from neighbor {} is {} ".format(j, diff))
                 tempsum += neighbors[j] * diff  # 'mass' added to itself
-        
-        new_data = old_data + tempsum  # essentially doing consensus the long way
+            elif data[j] == None: # add to the missing queue
+                missing_data[j].append(tag)
+                logging.debug('Adding {} to missing packets of neighbor {}'.format(tag, j))
+
+
+            # Attempt to get any missing data (Basically synchronization)
+            # If I had to guess this is where performance issues are
+            # Gives us after checking 200 times (20 sec timeout)
+            i_cnt = 0
+            while len(missing_data[j]) > 0 and i_cnt < 200:
+                tag1 = missing_data[j].popleft()
+                d1 = communicator.get(j, tag1)
+                if d1 != None:
+                    i_cnt = 0
+                    logging.debug("Picked up old data on tag {}".format(tag1))
+                    t = matrix_from_bytes(d1)
+                    diff = t - old_data
+                    logging.debug("diff from neighbor {} is {} ".format(j, diff))
+                    tempsum += neighbors[j] * diff
+                else:
+                    missing_data[j].append(tag1)
+                    time.sleep(0.05)
+                i_cnt += 1
+            logging.debug("Tempsum iter {} is {}".format(i, tempsum))
+
+        new_data = old_data + tempsum
+
 
     return new_data
 
@@ -184,19 +214,9 @@ def receive(tag, neighbors, communicator):
             dict: A dictionary mapping each neighbor to the data which is sent.
     '''
     d = {}
-    missing = 0
-    chk = []
     for n in neighbors:
         tmp = communicator.get(n, tag)
-        if tmp == None and n != 'self':
-            missing += 1
-            chk.append(n)
-        else:
-            d[n] = tmp
-
-    # time.sleep(0.1) # Only attempt at synchronization we have so far
-    for n in chk:
-        d[n] = communicator.get(n, tag)
+        d[n] = tmp
 
     return d
 

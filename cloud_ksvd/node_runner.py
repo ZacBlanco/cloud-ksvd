@@ -6,6 +6,7 @@ import requests
 import numpy as np
 import consensus
 import logging
+import traceback
 from urllib.parse import urlparse
 from configparser import ConfigParser
 from multiprocessing import Process, Value
@@ -138,7 +139,8 @@ def kickoff(task, tc):
     ####### Notify Other Nodes to Start #######
     port = config['node_runner']['port']
     logging.debug('Attempting to tell all other nodes in my vicinity to start')
-    for node in json.loads(config['graph']['nodes']):
+    neighs = get_neighbors()
+    for node in neighs:
         req_url = 'http://{}:{}/start/consensus?tc={}'.format(node, port, tc)
         logging.debug('Kickoff URL for node {} is {}'.format(node, req_url))
         try:
@@ -151,7 +153,6 @@ def kickoff(task, tc):
     # get neighbors and weights get_weights()
     # Pick a tag ID (doesn't matter) --> 1
     # communicator already created
-    neighs = get_neighbors()
     logging.debug('Got neighbors {}'.format(neighs))
     weights = consensus.get_weights(neighs)
     logging.debug('got weights {}'.format(weights))
@@ -159,14 +160,17 @@ def kickoff(task, tc):
     logging.debug('Loaded data')
     try:
         consensus_data = consensus.run(data, tc, 1, weights, c)
-        logging.debug("~~~~~~~~~~~~~~CONSENSUS DATA BELOW~~~~~~~~~~~~~~~~")
-        logging.debug('{}'.format(consensus_data))
-        logging.debug("~~~~~~~~~~~~~~CONSENSUS DATA ABOVE~~~~~~~~~~~~~~~~")
+        logging.info("~~~~~~~~~~~~~~CONSENSUS DATA BELOW~~~~~~~~~~~~~~~~")
+        logging.info('{}'.format(consensus_data))
+        logging.info("~~~~~~~~~~~~~~CONSENSUS DATA ABOVE~~~~~~~~~~~~~~~~")
         logging.debug('Ran consensus')
         # Log consensus data here
         ###########################################
     except:
         logging.error('Consensus threw an exception.')
+        exc_type, exc_value, exc_traceback = sys.exc_info()
+        # logging.error("Error: {}".format(e))
+        logging.error(repr(traceback.format_tb(exc_traceback)))
     c.close()
     with task.get_lock():
         task.value = 0
