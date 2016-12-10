@@ -246,7 +246,7 @@ class Communicator:
                 
                 
                 data, addr = _sock.recvfrom(1024)  # Receive at max 1024 bytes
-                logging.debug('Received data from address {}'.format(addr))
+                # logging.debug('Received data from address {}'.format(addr))
                 self.receive(data, addr[0])
             except BlockingIOError:
                 pass
@@ -350,7 +350,7 @@ class Communicator:
 
         ret = True
         packets = self.create_packets(data, tag)
-        logging.debug("Sending {} packet(s) to {}".format(len(packets), ip))
+        # logging.debug("Sending {} packet(s) to {}".format(len(packets), ip))
         for packet in packets:
             # logging.debug('Sending packet to IP: {} on port {}'.format(ip, self.send_port))
             try:
@@ -383,14 +383,14 @@ class Communicator:
 
         Args:
             ip (str): The ip address of the host we wish get data from
-            tag (str): The data tag for the message which is being received
+            tag (bytes/bytearray): The data tag for the message which is being received
 
         Returns:
             bytes: ``None`` if complete data is not found, Otherwise if found will return the data
 
         '''
         data = None
-        tg = tag.decode('utf-8')
+        tg = int.from_bytes(tag, byteorder='little')
         if ip not in self.data_store:
             data = None
         elif tg not in self.data_store[ip]:
@@ -461,7 +461,7 @@ class Communicator:
         # disassemble the packet
         seq_total = struct.unpack('H', data[0:2])[0]
         seq_num = struct.unpack('H', data[2:4])[0]
-        data_tag = data[4:8].decode('utf-8')
+        data_tag = int.from_bytes(data[4:8], byteorder='little')
         dat = data[8:]
 
         # Create an entry for data_tag
