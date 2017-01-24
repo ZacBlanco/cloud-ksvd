@@ -1,12 +1,16 @@
+import inspect
+import json
+import logging
+import math
 import socket
+import struct
 import threading
 import time
-import json
-import math
-import struct
-import logging
-import consensus
+import inspect
+from types import *
 from threading import Lock
+
+import consensus
 
 logging.basicConfig(filename='cloud_comm.log')
 
@@ -181,6 +185,28 @@ class Communicator:
         self.tmp_data = {}
         self.data_store = {}
         self.mtu = get_mtu()
+        self.recv_callback = None
+
+    def register_recv_callback(self, callback):
+        '''Allows one to register a callback function which is executed whenever a
+        full message is received and decoded.
+
+        The callback must have the signature of ``(str, bytes, bytes)`` where ``str`` is the sender address.
+        The first ``bytes`` is the tag. The second ``bytes`` is the data.
+
+        Args:
+            callback (func): A function with arguments of (sender, tag, data)
+
+        Returns:
+            N/A
+        '''
+        if type(callback) != FunctionType:
+            raise TypeError("Callback must be a function")
+        fullspec = inspect.getfullargspec(callback)
+        n_args = len(fullspec[0])
+        if n_args != 3:
+            raise ValueError("Callback function did not have 3 arguments.")
+        self.recv_callback = callback
 
     def close(self):
         '''Closes both listening sockets and the sending sockets
@@ -493,5 +519,7 @@ class Communicator:
             lock.acquire()
             self.data_store[addr][data_tag] = reassembled
             lock.release()
+            if self.recv_callback != None:
+                self.recv_callback(addr, data_tag, reassembled) # run a callback on the newly collected packets.
             self.tmp_data[addr][data_tag]['packets'] = {}
             self.tmp_data[addr][data_tag]['seq_total'] = {}

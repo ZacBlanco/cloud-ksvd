@@ -260,6 +260,25 @@ class TestCommunicator(unittest.TestCase):
         s2 = c1.get('local', 'tg11'.encode('utf-8'))
         self.assertNotEqual(s2, s, "Should not be able to retrieve the same data again")
         c1.close()
+
+    def test_register_callback(self):
+        def cbk(a, b, c):
+            return "callback"
+        def bck(a, b):
+            return "bad"
+        c1 = Communicator('udp', 9071)
+        c1.register_recv_callback(cbk)
+
+        # Should raise error on non-function
+        with self.assertRaises(TypeError):
+            c1.register_recv_callback("a")
+        
+        # Should raise error on bad function signature
+        with self.assertRaises(ValueError):
+            c1.register_recv_callback(bck)
+
+        
+
         
 
 
