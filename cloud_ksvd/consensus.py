@@ -119,7 +119,7 @@ def run(orig_data, tc, tag_id, neighbors, communicator, corr_spacing=5):
 
             # Attempt to get any missing data (Basically synchronization)
             # If I had to guess this is where performance issues are
-            # Gives us after checking 200 times (20 sec timeout)
+            # Gives up after checking 200 times (20 sec timeout)
             i_cnt = 0
             while len(missing_data[j]) > 0 and i_cnt < 200:
                 tag1 = missing_data[j].popleft()
